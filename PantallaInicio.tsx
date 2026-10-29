@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView } from 'react-native';
 import { Cita } from './types';
 import { TarjetaCita } from './TarjetaCita';
 
@@ -24,7 +24,7 @@ export default function PantallaInicio() {
   };
 
   return (
-    <View style={styles.contenedor}>
+    <SafeAreaView style={styles.contenedor}>
       <Text style={styles.saludo}>Hola, Dra. López</Text>
       <Text style={styles.subtitulo}>Hoy es un gran día</Text>
 
@@ -58,7 +58,7 @@ export default function PantallaInicio() {
           tipo={item.tipo}
         />
       ))}
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -66,6 +66,7 @@ const styles = StyleSheet.create({
   contenedor: {
     flex: 1,
     padding: 20,
+    paddingTop: 40,
     backgroundColor: '#ffffff',
   },
   saludo: {

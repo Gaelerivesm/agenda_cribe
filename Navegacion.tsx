@@ -2,7 +2,6 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-
 import PantallaInicio from './PantallaInicio';
 import PantallaCalendario from './PantallaCalendario';
 import PantallaNotasSesion from './PantallaNotasSesion';
@@ -10,9 +9,19 @@ import PantallaPacientes from './PantallaPacientes';
 import PantallaFichaPaciente from './PantallaFichaPaciente';
 import PantallaNotificaciones from './PantallaNotificaciones';
 import PantallaPerfil from './PantallaPerfil';
+import { RootTabParamList, CalendarioStackParamList, PacientesStackParamList } from './tiposNavegacion';
 
-const Tab = createBottomTabNavigator();
-const Stack = createNativeStackNavigator();
+const Tab = createBottomTabNavigator<RootTabParamList>();
+const Stack = createNativeStackNavigator<CalendarioStackParamList>();
+const StackPacientes = createNativeStackNavigator<PacientesStackParamList>();
+
+const ICONOS: Record<keyof RootTabParamList, keyof typeof Ionicons.glyphMap> = {
+  Inicio: 'home',
+  Calendario: 'calendar',
+  Pacientes: 'people',
+  Notificaciones: 'notifications',
+  Perfil: 'person',
+};
 
 function CalendarioStack() {
   return (
@@ -25,10 +34,10 @@ function CalendarioStack() {
 
 function PacientesStack() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="ListaPacientes" component={PantallaPacientes} />
-      <Stack.Screen name="FichaPaciente" component={PantallaFichaPaciente} />
-    </Stack.Navigator>
+    <StackPacientes.Navigator screenOptions={{ headerShown: false }}>
+      <StackPacientes.Screen name="ListaPacientes" component={PantallaPacientes} />
+      <StackPacientes.Screen name="FichaPaciente" component={PantallaFichaPaciente} />
+    </StackPacientes.Navigator>
   );
 }
 
@@ -40,15 +49,9 @@ export default function NavegacionPrincipal({ onCerrarSesion }: NavegacionPrinci
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
-        tabBarIcon: ({ color, size }) => {
-          let nombreIcono: any;
-          if (route.name === 'Inicio') nombreIcono = 'home';
-          else if (route.name === 'Calendario') nombreIcono = 'calendar'; 
-          else if (route.name === 'Pacientes') nombreIcono = 'people'; 
-          else if (route.name === 'Notificaciones') nombreIcono = 'notifications';
-          else if (route.name === 'Perfil') nombreIcono = 'person';
-          return <Ionicons name={nombreIcono} size={size} color={color} />;
-        },
+        tabBarIcon: ({ color, size }) => (
+          <Ionicons name={ICONOS[route.name]} size={size} color={color} />
+        ),
         tabBarActiveTintColor: '#115e59',
         tabBarInactiveTintColor: 'gray',
         headerShown: false,
@@ -58,7 +61,6 @@ export default function NavegacionPrincipal({ onCerrarSesion }: NavegacionPrinci
       <Tab.Screen name="Calendario" component={CalendarioStack} />
       <Tab.Screen name="Pacientes" component={PacientesStack} />
       <Tab.Screen name="Notificaciones" component={PantallaNotificaciones} />
-      {/* Pasamos la función onCerrarSesion a la PantallaPerfil */}
       <Tab.Screen name="Perfil">
         {() => <PantallaPerfil onCerrarSesion={onCerrarSesion} />}
       </Tab.Screen>

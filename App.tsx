@@ -1,26 +1,52 @@
-import React, { useState } from 'react';
+import React, { useContext, useState } from 'react';
+import { View, Text, ActivityIndicator, StatusBar, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import NavegacionPrincipal from './Navegacion';
-// Importa aquí tu pantalla de login si la tienes, o una vista temporal:
-// import PantallaLogin from './PantallaLogin';
+import PantallaLogin from './PantallaLogin';
+import { CitasProvider, CitasContext } from './CitasContext';
+import { PacientesProvider, PacientesContext } from './PacientesContext';
 
-export default function App() {
-  const [estaAutenticado, setEstaAutenticado] = useState(true);
+function Raiz() {
+  const [estaAutenticado, setEstaAutenticado] = useState(false);
+  const citas = useContext(CitasContext);
+  const pacientes = useContext(PacientesContext);
+  const cargando = (citas?.cargando ?? true) || (pacientes?.cargando ?? true);
 
-  const cerrarSesion = () => {
-    setEstaAutenticado(false);
-  };
+  if (cargando) {
+    return (
+      <View style={styles.pantallaCarga}>
+        <ActivityIndicator size="large" color="#115e59" />
+        <Text style={styles.textoCarga}>Cargando tu agenda...</Text>
+      </View>
+    );
+  }
 
   return (
     <NavigationContainer>
       {estaAutenticado ? (
-        // Pasamos la función de cerrar sesión a tu navegador principal
-        <NavegacionPrincipal onCerrarSesion={cerrarSesion} />
+        <NavegacionPrincipal onCerrarSesion={() => setEstaAutenticado(false)} />
       ) : (
-        // Aquí puedes poner tu pantalla de Login. Si no tienes una, puedes poner una vista simple:
-        // <PantallaLogin onLoginSuccess={() => setEstaAutenticado(true)} />
-        <NavegacionPrincipal onCerrarSesion={() => setEstaAutenticado(true)} /> // Temporal para pruebas
+        <PantallaLogin onLoginExitoso={() => setEstaAutenticado(true)} />
       )}
     </NavigationContainer>
   );
 }
+
+export default function App() {
+  return (
+    <SafeAreaProvider>
+      <StatusBar barStyle="dark-content" backgroundColor="#fdfbf7" />
+      <CitasProvider>
+        <PacientesProvider>
+          <Raiz />
+        </PacientesProvider>
+      </CitasProvider>
+    </SafeAreaProvider>
+  );
+}
+
+const styles = StyleSheet.create({
+  pantallaCarga: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fdfbf7' },
+  textoCarga: { marginTop: 14, fontSize: 15, color: '#6b7280' },
+});

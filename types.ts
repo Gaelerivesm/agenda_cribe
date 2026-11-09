@@ -6,7 +6,6 @@ export type Cita = {
   notaOpcional?: string;
 };
 
-// Nuevo tipo para los pacientes
 export type Paciente = {
   id: string;
   nombre: string;
@@ -21,7 +20,7 @@ export type Paciente = {
 
 export type CitaAgenda = {
   id: string;
-  fecha: string; // Formato 'YYYY-MM-DD' para filtrar fácil
+  fecha: string;
   hora: string;
   paciente: string;
   tipo: string;

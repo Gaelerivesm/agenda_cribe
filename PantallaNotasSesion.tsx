@@ -1,77 +1,162 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, SafeAreaView, ScrollView } from 'react-native';
+import React, { useContext, useState } from 'react';
+import {
+  View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView,
+  KeyboardAvoidingView, Platform, Alert,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRoute, useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { CitasContext } from './CitasContext';
+import { CalendarioStackParamList } from './tiposNavegacion';
+
+const NOMBRES_MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+
+const fechaLegible = (fecha: string) => {
+  const [anio, mes, dia] = fecha.split('-').map(Number);
+  if (!anio || !mes || !dia) return fecha;
+  return `${dia} de ${NOMBRES_MESES[mes - 1]} de ${anio}`;
+};
 
 export default function PantallaNotasSesion() {
-  const route = useRoute<any>();
   const navigation = useNavigation();
-  const { cita } = route.params;
+  const route = useRoute<RouteProp<CalendarioStackParamList, 'NotasSesion'>>();
+  const insets = useSafeAreaInsets();
 
-  const [motivo, setMotivo] = useState(cita.motivo);
+  const context = useContext(CitasContext);
+  if (!context) throw new Error('CitasContext no está disponible');
+  const { citas, editarCita } = context;
+
+  const { cita: citaParam, modo } = route.params;
+  const cita = citas.find(c => c.id === citaParam.id) ?? citaParam;
+
+  const [editando, setEditando] = useState(modo === 'editar');
   const [notas, setNotas] = useState(cita.notas);
 
-  const guardarNotas = () => {
-    alert('¡Notas guardadas con éxito!');
-    navigation.goBack();
+  const guardar = () => {
+    const { id, ...resto } = cita;
+    editarCita(id, { ...resto, notas: notas.trim() });
+    setEditando(false);
+    Alert.alert('Guardado', 'Las notas de la sesión se actualizaron.');
+  };
+
+  const cancelar = () => {
+    setNotas(cita.notas);
+    setEditando(false);
   };
 
   return (
-    <SafeAreaView style={styles.contenedor}>
-      <View style={styles.encabezado}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color="#115e59" />
-        </TouchableOpacity>
-        <Text style={styles.tituloHeader}>Notas de sesión</Text>
-        <View style={{ width: 24 }} />
-      </View>
-
-      <ScrollView contentContainerStyle={{ padding: 20 }}>
-        <View style={styles.tarjetaPacienteInfo}>
-          <View style={styles.avatarGris}>
-            <Ionicons name="person" size={24} color="#6b7280" />
-          </View>
-          <View>
-            <Text style={styles.fechaHora}>{cita.fecha} - {cita.hora}</Text>
-            <Text style={styles.nombrePaciente}>{cita.paciente}</Text>
-          </View>
+    <KeyboardAvoidingView
+      style={styles.flex}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      <View style={[styles.contenedor, { paddingTop: insets.top + 10 }]}>
+        <View style={styles.encabezado}>
+          <TouchableOpacity style={styles.botonAtras} onPress={() => navigation.goBack()}>
+            <Ionicons name="chevron-back" size={24} color="#115e59" />
+          </TouchableOpacity>
+          <Text style={styles.titulo}>Notas de sesión</Text>
+          <View style={styles.espaciadorEncabezado} />
         </View>
 
-        <Text style={styles.label}>Motivo de la sesión</Text>
-        <TextInput
-          style={styles.inputMotivo}
-          value={motivo}
-          onChangeText={setMotivo}
-          multiline
-        />
+        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+          <View style={styles.tarjeta}>
+            <View style={styles.avatar}>
+              <Ionicons name="person" size={28} color="#6b7280" />
+            </View>
+            <View style={styles.infoPaciente}>
+              <Text style={styles.nombre}>{cita.paciente}</Text>
+              <Text style={styles.tipo}>{cita.tipo}</Text>
+            </View>
+            {cita.confirmada ? (
+              <View style={styles.insigniaConfirmada}>
+                <Ionicons name="checkmark-circle" size={14} color="#065f46" />
+                <Text style={styles.textoInsignia}>Confirmada</Text>
+              </View>
+            ) : (
+              <View style={styles.insigniaPendiente}>
+                <Text style={styles.textoPendiente}>Pendiente</Text>
+              </View>
+            )}
+          </View>
 
-        <Text style={styles.label}>Notas</Text>
-        <TextInput
-          style={styles.inputNotas}
-          value={notas}
-          onChangeText={setNotas}
-          multiline
-        />
+          <View style={styles.tarjeta}>
+            <View style={styles.datoFila}>
+              <Ionicons name="calendar-outline" size={20} color="#115e59" />
+              <Text style={styles.datoTexto}>{fechaLegible(cita.fecha)}</Text>
+            </View>
+            <View style={styles.datoFila}>
+              <Ionicons name="time-outline" size={20} color="#115e59" />
+              <Text style={styles.datoTexto}>{cita.hora}</Text>
+            </View>
+          </View>
 
-        <TouchableOpacity style={styles.botonGuardar} onPress={guardarNotas}>
-          <Text style={styles.textoBotonGuardar}>Guardar</Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </SafeAreaView>
+          <Text style={styles.tituloSeccion}>Notas</Text>
+          {editando ? (
+            <TextInput
+              style={styles.inputNotas}
+              value={notas}
+              onChangeText={setNotas}
+              placeholder="Escribe las observaciones de la sesión..."
+              multiline
+              autoFocus
+            />
+          ) : (
+            <View style={styles.cajaNotas}>
+              <Text style={cita.notas.length > 0 ? styles.textoNotas : styles.textoSinNotas}>
+                {cita.notas.length > 0 ? cita.notas : 'Aún no hay notas para esta sesión.'}
+              </Text>
+            </View>
+          )}
+
+          {editando ? (
+            <View style={styles.filaBotones}>
+              <TouchableOpacity style={styles.botonSecundario} onPress={cancelar}>
+                <Text style={styles.textoSecundario}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.botonPrimario} onPress={guardar}>
+                <Text style={styles.textoPrimario}>Guardar</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity style={styles.botonPrimarioAncho} onPress={() => setEditando(true)}>
+              <Ionicons name="pencil" size={18} color="#ffffff" />
+              <Text style={styles.textoPrimario}>Editar notas</Text>
+            </TouchableOpacity>
+          )}
+        </ScrollView>
+      </View>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  contenedor: { flex: 1, backgroundColor: '#fdfbf7', paddingTop: 20 },
-  encabezado: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 15 },
-  tituloHeader: { fontSize: 20, fontWeight: 'bold', color: '#115e59' },
-  tarjetaPacienteInfo: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#ffffff', padding: 15, borderRadius: 12, marginBottom: 20 },
-  avatarGris: { width: 50, height: 50, borderRadius: 25, backgroundColor: '#e5e7eb', justifyContent: 'center', alignItems: 'center', marginRight: 15 },
-  fechaHora: { fontSize: 13, color: '#6b7280' },
-  nombrePaciente: { fontSize: 16, fontWeight: 'bold', color: '#1f2937' },
-  label: { fontSize: 14, fontWeight: 'bold', color: '#115e59', marginBottom: 6 },
-  inputMotivo: { backgroundColor: '#ffffff', borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, padding: 12, fontSize: 15, marginBottom: 20, height: 80, textAlignVertical: 'top' },
-  inputNotas: { backgroundColor: '#ffffff', borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, padding: 12, fontSize: 15, marginBottom: 30, height: 140, textAlignVertical: 'top' },
-  botonGuardar: { backgroundColor: '#115e59', padding: 16, borderRadius: 12, alignItems: 'center' },
-  textoBotonGuardar: { color: '#ffffff', fontSize: 16, fontWeight: 'bold' },
+  flex: { flex: 1 },
+  contenedor: { flex: 1, backgroundColor: '#fdfbf7' },
+  encabezado: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginBottom: 16 },
+  botonAtras: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#e5e7eb', justifyContent: 'center', alignItems: 'center' },
+  espaciadorEncabezado: { width: 40 },
+  titulo: { fontSize: 20, fontWeight: 'bold', color: '#1e1b4b' },
+  scroll: { paddingHorizontal: 20, paddingBottom: 40 },
+  tarjeta: { backgroundColor: '#ffffff', borderRadius: 16, padding: 16, marginBottom: 14, flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 5, shadowOffset: { width: 0, height: 1 }, elevation: 2 },
+  avatar: { width: 52, height: 52, borderRadius: 26, backgroundColor: '#e5e7eb', justifyContent: 'center', alignItems: 'center', marginRight: 14 },
+  infoPaciente: { flex: 1 },
+  nombre: { fontSize: 18, fontWeight: 'bold', color: '#1e1b4b' },
+  tipo: { fontSize: 14, color: '#115e59', marginTop: 2 },
+  insigniaConfirmada: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#d1fae5', paddingVertical: 4, paddingHorizontal: 8, borderRadius: 10 },
+  textoInsignia: { fontSize: 11, fontWeight: 'bold', color: '#065f46' },
+  insigniaPendiente: { backgroundColor: '#f3f4f6', paddingVertical: 4, paddingHorizontal: 8, borderRadius: 10 },
+  textoPendiente: { fontSize: 11, fontWeight: 'bold', color: '#6b7280' },
+  datoFila: { flexDirection: 'row', alignItems: 'center', gap: 10, width: '100%', paddingVertical: 6 },
+  datoTexto: { fontSize: 15, color: '#1f2937' },
+  tituloSeccion: { fontSize: 18, fontWeight: 'bold', color: '#1e1b4b', marginTop: 6, marginBottom: 10 },
+  cajaNotas: { backgroundColor: '#ffffff', borderRadius: 16, padding: 16, minHeight: 140, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 5, shadowOffset: { width: 0, height: 1 }, elevation: 2 },
+  textoNotas: { fontSize: 15, color: '#1f2937', lineHeight: 22 },
+  textoSinNotas: { fontSize: 15, color: '#9ca3af', fontStyle: 'italic' },
+  inputNotas: { backgroundColor: '#ffffff', borderRadius: 16, borderWidth: 1, borderColor: '#115e59', padding: 16, minHeight: 180, fontSize: 15, color: '#1f2937', textAlignVertical: 'top' },
+  filaBotones: { flexDirection: 'row', gap: 12, marginTop: 20 },
+  botonPrimario: { flex: 1, backgroundColor: '#115e59', padding: 15, borderRadius: 12, alignItems: 'center' },
+  botonPrimarioAncho: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, backgroundColor: '#115e59', padding: 15, borderRadius: 12, marginTop: 20 },
+  textoPrimario: { color: '#ffffff', fontWeight: 'bold', fontSize: 16 },
+  botonSecundario: { flex: 1, padding: 15, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: '#d1d5db', backgroundColor: '#ffffff' },
+  textoSecundario: { color: '#374151', fontWeight: 'bold', fontSize: 16 },
 });

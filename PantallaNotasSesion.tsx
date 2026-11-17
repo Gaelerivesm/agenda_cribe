@@ -8,14 +8,7 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CitasContext } from './CitasContext';
 import { CalendarioStackParamList } from './tiposNavegacion';
-
-const NOMBRES_MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
-
-const fechaLegible = (fecha: string) => {
-  const [anio, mes, dia] = fecha.split('-').map(Number);
-  if (!anio || !mes || !dia) return fecha;
-  return `${dia} de ${NOMBRES_MESES[mes - 1]} de ${anio}`;
-};
+import { fechaLarga, iniciales } from './utilidades';
 
 export default function PantallaNotasSesion() {
   const navigation = useNavigation();
@@ -34,7 +27,9 @@ export default function PantallaNotasSesion() {
 
   const guardar = () => {
     const { id, ...resto } = cita;
-    editarCita(id, { ...resto, notas: notas.trim() });
+    const notasLimpias = notas.trim();
+    setNotas(notasLimpias);
+    editarCita(id, { ...resto, notas: notasLimpias });
     setEditando(false);
     Alert.alert('Guardado', 'Las notas de la sesión se actualizaron.');
   };
@@ -52,7 +47,7 @@ export default function PantallaNotasSesion() {
       <View style={[styles.contenedor, { paddingTop: insets.top + 10 }]}>
         <View style={styles.encabezado}>
           <TouchableOpacity style={styles.botonAtras} onPress={() => navigation.goBack()}>
-            <Ionicons name="chevron-back" size={24} color="#115e59" />
+            <Ionicons name="chevron-back" size={24} color="#111827" />
           </TouchableOpacity>
           <Text style={styles.titulo}>Notas de sesión</Text>
           <View style={styles.espaciadorEncabezado} />
@@ -61,42 +56,38 @@ export default function PantallaNotasSesion() {
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           <View style={styles.tarjeta}>
             <View style={styles.avatar}>
-              <Ionicons name="person" size={28} color="#6b7280" />
+              <Text style={styles.textoAvatar}>{iniciales(cita.paciente)}</Text>
             </View>
             <View style={styles.infoPaciente}>
               <Text style={styles.nombre}>{cita.paciente}</Text>
               <Text style={styles.tipo}>{cita.tipo}</Text>
             </View>
-            {cita.confirmada ? (
-              <View style={styles.insigniaConfirmada}>
-                <Ionicons name="checkmark-circle" size={14} color="#065f46" />
-                <Text style={styles.textoInsignia}>Confirmada</Text>
-              </View>
-            ) : (
-              <View style={styles.insigniaPendiente}>
-                <Text style={styles.textoPendiente}>Pendiente</Text>
-              </View>
-            )}
+            <View style={styles.insigniaConfirmada}>
+              <Text style={styles.textoInsignia}>
+                {cita.confirmada ? 'Confirmada' : 'Pendiente'}
+              </Text>
+            </View>
           </View>
 
           <View style={styles.tarjeta}>
             <View style={styles.datoFila}>
-              <Ionicons name="calendar-outline" size={20} color="#115e59" />
-              <Text style={styles.datoTexto}>{fechaLegible(cita.fecha)}</Text>
+              <Ionicons name="calendar-outline" size={20} color="#B80065" />
+              <Text style={styles.datoTexto}>{fechaLarga(cita.fecha)}</Text>
             </View>
             <View style={styles.datoFila}>
-              <Ionicons name="time-outline" size={20} color="#115e59" />
-              <Text style={styles.datoTexto}>{cita.hora}</Text>
+              <Ionicons name="time-outline" size={20} color="#B80065" />
+              <Text style={styles.datoTexto}>{cita.hora} hrs</Text>
             </View>
           </View>
 
-          <Text style={styles.tituloSeccion}>Notas</Text>
+          <Text style={styles.tituloSeccion}>Observaciones clínicas</Text>
           {editando ? (
             <TextInput
               style={styles.inputNotas}
               value={notas}
               onChangeText={setNotas}
               placeholder="Escribe las observaciones de la sesión..."
+              placeholderTextColor="#9ca3af"
               multiline
               autoFocus
             />
@@ -131,32 +122,100 @@ export default function PantallaNotasSesion() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  contenedor: { flex: 1, backgroundColor: '#fdfbf7' },
+  contenedor: { flex: 1, backgroundColor: '#FAFAFA' },
   encabezado: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginBottom: 16 },
-  botonAtras: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#e5e7eb', justifyContent: 'center', alignItems: 'center' },
+  botonAtras: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#ffffff', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#e5e7eb' },
   espaciadorEncabezado: { width: 40 },
-  titulo: { fontSize: 20, fontWeight: 'bold', color: '#1e1b4b' },
+  titulo: { fontSize: 18, fontWeight: 'bold', color: '#111827' },
   scroll: { paddingHorizontal: 20, paddingBottom: 40 },
-  tarjeta: { backgroundColor: '#ffffff', borderRadius: 16, padding: 16, marginBottom: 14, flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 5, shadowOffset: { width: 0, height: 1 }, elevation: 2 },
-  avatar: { width: 52, height: 52, borderRadius: 26, backgroundColor: '#e5e7eb', justifyContent: 'center', alignItems: 'center', marginRight: 14 },
+  tarjeta: {
+    backgroundColor: '#ffffff',
+    borderRadius: 18,
+    padding: 16,
+    marginBottom: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    borderWidth: 1,
+    borderColor: '#f3f4f6',
+    shadowColor: '#000',
+    shadowOpacity: 0.02,
+    shadowRadius: 5,
+    elevation: 1,
+  },
+  avatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#FDF2F8',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
+    borderWidth: 1,
+    borderColor: '#FCE7F3',
+  },
+  textoAvatar: { fontSize: 16, fontWeight: 'bold', color: '#B80065' },
   infoPaciente: { flex: 1 },
-  nombre: { fontSize: 18, fontWeight: 'bold', color: '#1e1b4b' },
-  tipo: { fontSize: 14, color: '#115e59', marginTop: 2 },
-  insigniaConfirmada: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#d1fae5', paddingVertical: 4, paddingHorizontal: 8, borderRadius: 10 },
-  textoInsignia: { fontSize: 11, fontWeight: 'bold', color: '#065f46' },
-  insigniaPendiente: { backgroundColor: '#f3f4f6', paddingVertical: 4, paddingHorizontal: 8, borderRadius: 10 },
-  textoPendiente: { fontSize: 11, fontWeight: 'bold', color: '#6b7280' },
+  nombre: { fontSize: 16, fontWeight: 'bold', color: '#111827' },
+  tipo: { fontSize: 13, color: '#B80065', marginTop: 2, fontWeight: '500' },
+  insigniaConfirmada: {
+    backgroundColor: '#FDF2F8',
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#FCE7F3',
+  },
+  textoInsignia: { fontSize: 11, fontWeight: 'bold', color: '#B80065' },
   datoFila: { flexDirection: 'row', alignItems: 'center', gap: 10, width: '100%', paddingVertical: 6 },
-  datoTexto: { fontSize: 15, color: '#1f2937' },
-  tituloSeccion: { fontSize: 18, fontWeight: 'bold', color: '#1e1b4b', marginTop: 6, marginBottom: 10 },
-  cajaNotas: { backgroundColor: '#ffffff', borderRadius: 16, padding: 16, minHeight: 140, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 5, shadowOffset: { width: 0, height: 1 }, elevation: 2 },
-  textoNotas: { fontSize: 15, color: '#1f2937', lineHeight: 22 },
-  textoSinNotas: { fontSize: 15, color: '#9ca3af', fontStyle: 'italic' },
-  inputNotas: { backgroundColor: '#ffffff', borderRadius: 16, borderWidth: 1, borderColor: '#115e59', padding: 16, minHeight: 180, fontSize: 15, color: '#1f2937', textAlignVertical: 'top' },
+  datoTexto: { fontSize: 14, color: '#111827' },
+  tituloSeccion: { fontSize: 16, fontWeight: 'bold', color: '#111827', marginTop: 8, marginBottom: 10 },
+  cajaNotas: {
+    backgroundColor: '#ffffff',
+    borderRadius: 18,
+    padding: 16,
+    minHeight: 140,
+    borderWidth: 1,
+    borderColor: '#f3f4f6',
+  },
+  textoNotas: { fontSize: 14, color: '#111827', lineHeight: 22 },
+  textoSinNotas: { fontSize: 14, color: '#9ca3af', fontStyle: 'italic' },
+  inputNotas: {
+    backgroundColor: '#ffffff',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#B80065',
+    padding: 16,
+    minHeight: 180,
+    fontSize: 14,
+    color: '#111827',
+    textAlignVertical: 'top',
+  },
   filaBotones: { flexDirection: 'row', gap: 12, marginTop: 20 },
-  botonPrimario: { flex: 1, backgroundColor: '#115e59', padding: 15, borderRadius: 12, alignItems: 'center' },
-  botonPrimarioAncho: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, backgroundColor: '#115e59', padding: 15, borderRadius: 12, marginTop: 20 },
-  textoPrimario: { color: '#ffffff', fontWeight: 'bold', fontSize: 16 },
-  botonSecundario: { flex: 1, padding: 15, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: '#d1d5db', backgroundColor: '#ffffff' },
-  textoSecundario: { color: '#374151', fontWeight: 'bold', fontSize: 16 },
+  botonPrimario: { flex: 1, backgroundColor: '#B80065', padding: 15, borderRadius: 14, alignItems: 'center' },
+  botonPrimarioAncho: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#B80065',
+    padding: 15,
+    borderRadius: 14,
+    marginTop: 20,
+    shadowColor: '#B80065',
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  textoPrimario: { color: '#ffffff', fontWeight: 'bold', fontSize: 15 },
+  botonSecundario: {
+    flex: 1,
+    padding: 15,
+    borderRadius: 14,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    backgroundColor: '#ffffff',
+  },
+  textoSecundario: { color: '#374151', fontWeight: 'bold', fontSize: 15 },
 });

@@ -55,7 +55,7 @@ export default function PantallaPacientes() {
         <View style={styles.info}>
           <Text style={styles.nombre}>{item.nombre}</Text>
           <Text style={proxima ? styles.proxima : styles.sinProxima}>
-            {proxima ? `Próxima cita: ${etiquetaRelativa(proxima.fecha)} ${proxima.hora}` : 'Sin citas próximas'}
+            {proxima ? `Próxima: ${etiquetaRelativa(proxima.fecha)} ${proxima.hora}` : 'Sin citas próximas'}
           </Text>
         </View>
         <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
@@ -77,6 +77,7 @@ export default function PantallaPacientes() {
           value={busqueda}
           onChangeText={setBusqueda}
           placeholder="Buscar paciente"
+          placeholderTextColor="#9ca3af"
           autoCorrect={false}
         />
         {busqueda.length > 0 ? (
@@ -101,7 +102,7 @@ export default function PantallaPacientes() {
       />
 
       <TouchableOpacity style={styles.botonFlotante} onPress={() => setModalVisible(true)}>
-        <Ionicons name="add" size={30} color="#ffffff" />
+        <Ionicons name="add" size={32} color="#ffffff" />
       </TouchableOpacity>
 
       <FormularioPaciente
@@ -117,20 +118,76 @@ export default function PantallaPacientes() {
 }
 
 const styles = StyleSheet.create({
-  contenedor: { flex: 1, backgroundColor: '#fdfbf7' },
-  encabezado: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', paddingHorizontal: 20, marginBottom: 16 },
-  titulo: { fontSize: 26, fontWeight: 'bold', color: '#1e1b4b' },
-  contador: { fontSize: 14, color: '#6b7280' },
-  buscador: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#f3f4f6', marginHorizontal: 20, marginBottom: 14, paddingHorizontal: 14, borderRadius: 14 },
-  inputBusqueda: { flex: 1, paddingVertical: 12, fontSize: 15, color: '#1e1b4b' },
+  contenedor: { flex: 1, backgroundColor: '#FAFAFA' },
+  encabezado: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+    paddingHorizontal: 20,
+    marginBottom: 16,
+  },
+  titulo: { fontSize: 26, fontWeight: 'bold', color: '#111827' },
+  contador: { fontSize: 13, color: '#6b7280', fontWeight: '500' },
+  buscador: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: '#ffffff',
+    marginHorizontal: 20,
+    marginBottom: 16,
+    paddingHorizontal: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    height: 48,
+  },
+  inputBusqueda: { flex: 1, fontSize: 14, color: '#111827' },
   lista: { paddingHorizontal: 20, paddingBottom: 110 },
-  tarjeta: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#ffffff', borderRadius: 16, padding: 14, marginBottom: 10, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 5, shadowOffset: { width: 0, height: 1 }, elevation: 2 },
-  avatar: { width: 46, height: 46, borderRadius: 23, backgroundColor: '#d1fae5', justifyContent: 'center', alignItems: 'center', marginRight: 14 },
-  textoAvatar: { fontSize: 16, fontWeight: 'bold', color: '#115e59' },
+  tarjeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderRadius: 18,
+    padding: 14,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#f3f4f6',
+    shadowColor: '#000',
+    shadowOpacity: 0.02,
+    shadowRadius: 5,
+    elevation: 1,
+  },
+  avatar: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: '#FDF2F8',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
+    borderWidth: 1,
+    borderColor: '#FCE7F3',
+  },
+  textoAvatar: { fontSize: 15, fontWeight: 'bold', color: '#B80065' },
   info: { flex: 1 },
-  nombre: { fontSize: 16, fontWeight: 'bold', color: '#1e1b4b' },
-  proxima: { fontSize: 13, color: '#115e59', marginTop: 2 },
+  nombre: { fontSize: 16, fontWeight: 'bold', color: '#111827' },
+  proxima: { fontSize: 13, color: '#B80065', marginTop: 2, fontWeight: '500' },
   sinProxima: { fontSize: 13, color: '#9ca3af', marginTop: 2 },
-  vacio: { textAlign: 'center', color: '#9ca3af', marginTop: 40, fontSize: 15 },
-  botonFlotante: { position: 'absolute', bottom: 20, right: 20, backgroundColor: '#115e59', width: 60, height: 60, borderRadius: 30, justifyContent: 'center', alignItems: 'center', elevation: 5, shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 4, shadowOffset: { width: 0, height: 2 } },
+  vacio: { textAlign: 'center', color: '#9ca3af', marginTop: 40, fontSize: 14 },
+  botonFlotante: {
+    position: 'absolute',
+    bottom: 24,
+    right: 20,
+    backgroundColor: '#B80065',
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 6,
+    shadowColor: '#B80065',
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+  },
 });

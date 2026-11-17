@@ -86,7 +86,7 @@ export default function FormularioPaciente({ visible, paciente, onCerrar, onGuar
                 style={[styles.input, styles.campoFecha, mostrarSelector && styles.campoActivo]}
                 onPress={() => setMostrarSelector(!mostrarSelector)}
               >
-                <Ionicons name="gift-outline" size={18} color="#115e59" />
+                <Ionicons name="gift-outline" size={18} color="#B80065" />
                 <Text style={fechaNacimiento ? styles.textoFecha : styles.textoPlaceholder}>
                   {fechaNacimiento ? fechaLarga(fechaNacimiento) : 'Opcional'}
                 </Text>
@@ -106,7 +106,7 @@ export default function FormularioPaciente({ visible, paciente, onCerrar, onGuar
                   locale="es-MX"
                   maximumDate={new Date()}
                   display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                  accentColor="#115e59"
+                  accentColor="#B80065"
                   onChange={alCambiarFecha}
                 />
                 {Platform.OS === 'ios' ? (
@@ -122,7 +122,7 @@ export default function FormularioPaciente({ visible, paciente, onCerrar, onGuar
               style={styles.input}
               value={telefono}
               onChangeText={setTelefono}
-              placeholder="614 555 0100"
+              placeholder="+52 123 456 7890"
               keyboardType="phone-pad"
             />
 
@@ -131,7 +131,7 @@ export default function FormularioPaciente({ visible, paciente, onCerrar, onGuar
               style={styles.input}
               value={correo}
               onChangeText={setCorreo}
-              placeholder="correo@ejemplo.com"
+              placeholder="paciente@correo.com"
               keyboardType="email-address"
               autoCapitalize="none"
             />
@@ -151,19 +151,19 @@ const styles = StyleSheet.create({
   fondo: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   contenedor: { backgroundColor: '#ffffff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: '92%' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  titulo: { fontSize: 20, fontWeight: 'bold', color: '#1e1b4b' },
-  label: { fontSize: 13, fontWeight: 'bold', color: '#6b7280', marginBottom: 5 },
-  input: { backgroundColor: '#f9fafb', borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, padding: 12, marginBottom: 14, color: '#1e1b4b' },
+  titulo: { fontSize: 20, fontWeight: 'bold', color: '#111827' },
+  label: { fontSize: 13, fontWeight: 'bold', color: '#374151', marginBottom: 5 },
+  input: { backgroundColor: '#f9fafb', borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 14, padding: 12, marginBottom: 14, color: '#111827' },
   filaFecha: { flexDirection: 'row', alignItems: 'flex-start' },
   campoFecha: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
-  campoActivo: { borderColor: '#115e59' },
-  textoFecha: { fontSize: 14, color: '#1e1b4b' },
+  campoActivo: { borderColor: '#B80065' },
+  textoFecha: { fontSize: 14, color: '#111827' },
   textoPlaceholder: { fontSize: 14, color: '#9ca3af' },
   botonLimpiar: { paddingLeft: 10, paddingTop: 11 },
   contenedorPicker: { marginBottom: 14, backgroundColor: '#f9fafb', borderRadius: 14, padding: 8 },
   botonListo: { alignSelf: 'flex-end', paddingVertical: 8, paddingHorizontal: 16 },
-  textoBotonListo: { color: '#115e59', fontWeight: 'bold', fontSize: 15 },
-  botonGuardar: { backgroundColor: '#115e59', padding: 15, borderRadius: 12, alignItems: 'center', marginTop: 6 },
+  textoBotonListo: { color: '#B80065', fontWeight: 'bold', fontSize: 15 },
+  botonGuardar: { backgroundColor: '#B80065', padding: 15, borderRadius: 14, alignItems: 'center', marginTop: 6 },
   textoGuardar: { color: '#ffffff', fontWeight: 'bold', fontSize: 16 },
   espacioFinal: { height: 20 },
 });

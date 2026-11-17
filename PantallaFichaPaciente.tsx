@@ -110,75 +110,101 @@ export default function PantallaFichaPaciente() {
 
   return (
     <View style={[styles.contenedor, { paddingTop: insets.top + 10 }]}>
+      {/* Cabecera con volver y editar */}
       <View style={styles.encabezado}>
-        <TouchableOpacity style={styles.botonAtras} onPress={() => navigation.goBack()}>
-          <Ionicons name="chevron-back" size={24} color="#115e59" />
+        <TouchableOpacity style={styles.botonIcono} onPress={() => navigation.goBack()}>
+          <Ionicons name="chevron-back" size={24} color="#111827" />
         </TouchableOpacity>
-        <Text style={styles.titulo}>Ficha del paciente</Text>
-        <TouchableOpacity style={styles.botonAtras} onPress={() => setModalVisible(true)}>
-          <Ionicons name="pencil" size={20} color="#115e59" />
+        <Text style={styles.titulo}>Perfil del paciente</Text>
+        <TouchableOpacity style={styles.botonIcono} onPress={() => setModalVisible(true)}>
+          <Ionicons name="pencil" size={20} color="#111827" />
         </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        {/* Tarjeta de perfil con avatar grande */}
         <View style={styles.tarjetaPerfil}>
           <View style={styles.avatar}>
             <Text style={styles.textoAvatar}>{iniciales(paciente.nombre)}</Text>
           </View>
           <Text style={styles.nombre}>{paciente.nombre}</Text>
           {edad !== null ? <Text style={styles.edad}>{edad} años</Text> : null}
-          {diasCumple !== null && diasCumple <= 30 ? (
+
+          {diasCumple !== null ? (
             <View style={styles.insigniaCumple}>
-              <Ionicons name="gift" size={14} color="#8b5cf6" />
+              <Ionicons name="gift-outline" size={14} color="#B80065" />
               <Text style={styles.textoCumple}>
-                {diasCumple === 0 ? 'Cumple años hoy' : `Cumple en ${diasCumple} ${diasCumple === 1 ? 'día' : 'días'}`}
+                {diasCumple === 0 ? 'Cumpleaños hoy' : `Cumpleaños en ${diasCumple} ${diasCumple === 1 ? 'día' : 'días'}`}
               </Text>
             </View>
           ) : null}
         </View>
 
+        {/* Tarjeta de datos de contacto */}
         <View style={styles.tarjeta}>
           <View style={styles.datoFila}>
-            <Ionicons name="calendar-outline" size={20} color="#115e59" />
-            <Text style={paciente.fechaNacimiento ? styles.datoTexto : styles.datoVacio}>
-              {paciente.fechaNacimiento ? `Nació el ${fechaCorta(paciente.fechaNacimiento)} de ${paciente.fechaNacimiento.slice(0, 4)}` : 'Sin fecha de nacimiento'}
-            </Text>
+            <Ionicons name="calendar-outline" size={20} color="#B80065" />
+            <View style={styles.infoDato}>
+              <Text style={styles.etiquetaDato}>Fecha de nacimiento</Text>
+              <Text style={paciente.fechaNacimiento ? styles.datoTexto : styles.datoVacio}>
+                {paciente.fechaNacimiento ? `${fechaCorta(paciente.fechaNacimiento)} de ${paciente.fechaNacimiento.slice(0, 4)}` : 'Sin fecha registrada'}
+              </Text>
+            </View>
           </View>
+
           <TouchableOpacity
             style={styles.datoFila}
             disabled={!paciente.telefono}
             onPress={() => Linking.openURL(`tel:${paciente.telefono.replace(/\s/g, '')}`)}
           >
-            <Ionicons name="call-outline" size={20} color="#115e59" />
-            <Text style={paciente.telefono ? styles.datoEnlace : styles.datoVacio}>
-              {paciente.telefono || 'Sin teléfono'}
-            </Text>
+            <Ionicons name="call-outline" size={20} color="#B80065" />
+            <View style={styles.infoDato}>
+              <Text style={styles.etiquetaDato}>Teléfono</Text>
+              <Text style={paciente.telefono ? styles.datoEnlace : styles.datoVacio}>
+                {paciente.telefono || 'Sin teléfono'}
+              </Text>
+            </View>
           </TouchableOpacity>
+
           <TouchableOpacity
             style={styles.datoFila}
             disabled={!paciente.correo}
             onPress={() => Linking.openURL(`mailto:${paciente.correo}`)}
           >
-            <Ionicons name="mail-outline" size={20} color="#115e59" />
-            <Text style={paciente.correo ? styles.datoEnlace : styles.datoVacio}>
-              {paciente.correo || 'Sin correo'}
-            </Text>
+            <Ionicons name="mail-outline" size={20} color="#B80065" />
+            <View style={styles.infoDato}>
+              <Text style={styles.etiquetaDato}>Correo electrónico</Text>
+              <Text style={paciente.correo ? styles.datoEnlace : styles.datoVacio}>
+                {paciente.correo || 'Sin correo'}
+              </Text>
+            </View>
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.botonPrimarioAncho} onPress={agendarCita}>
-          <Ionicons name="add-circle-outline" size={20} color="#ffffff" />
-          <Text style={styles.textoPrimario}>Agendar cita</Text>
+        {/* Botón grande Agendar Cita */}
+        <TouchableOpacity style={styles.botonAgendarPrincipal} onPress={agendarCita}>
+          <Ionicons name="calendar-outline" size={20} color="#ffffff" style={styles.iconoBotonAgendar} />
+          <Text style={styles.textoBotonAgendar}>Agendar cita</Text>
         </TouchableOpacity>
 
+        {/* Sección: Próximas citas */}
         <Text style={styles.tituloSeccion}>Próximas citas</Text>
         <View style={styles.tarjeta}>
-          {proximas.length > 0 ? proximas.map(renderCita) : <Text style={styles.vacio}>No hay citas próximas.</Text>}
+          {proximas.length > 0 ? (
+            proximas.map(renderCita)
+          ) : (
+            <Text style={styles.vacio}>Sin citas programadas</Text>
+          )}
         </View>
 
+        {/* Sección: Historial */}
         <Text style={styles.tituloSeccion}>Historial</Text>
         <View style={styles.tarjeta}>
-          {historial.length > 0 ? historial.map(renderCita) : <Text style={styles.vacio}>Aún no hay sesiones anteriores.</Text>}
+          {historial.length > 0 ? (
+            historial.map(renderCita)
+          ) : (
+            <Text style={styles.vacio}>Aún no hay sesiones anteriores.</Text>
+          )}
         </View>
 
         <TouchableOpacity style={styles.botonEliminar} onPress={confirmarEliminar}>
@@ -197,36 +223,145 @@ export default function PantallaFichaPaciente() {
 }
 
 const styles = StyleSheet.create({
-  contenedor: { flex: 1, backgroundColor: '#fdfbf7' },
+  contenedor: { flex: 1, backgroundColor: '#FAFAFA' },
   centrado: { justifyContent: 'center', alignItems: 'center' },
-  encabezado: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginBottom: 16 },
-  botonAtras: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#e5e7eb', justifyContent: 'center', alignItems: 'center' },
-  titulo: { fontSize: 20, fontWeight: 'bold', color: '#1e1b4b' },
+  encabezado: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    marginBottom: 16,
+  },
+  botonIcono: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#ffffff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  titulo: { fontSize: 18, fontWeight: 'bold', color: '#111827' },
   scroll: { paddingHorizontal: 20, paddingBottom: 40 },
-  tarjetaPerfil: { backgroundColor: '#ffffff', borderRadius: 20, padding: 20, alignItems: 'center', marginBottom: 14, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 5, shadowOffset: { width: 0, height: 1 }, elevation: 2 },
-  avatar: { width: 72, height: 72, borderRadius: 36, backgroundColor: '#d1fae5', justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
-  textoAvatar: { fontSize: 26, fontWeight: 'bold', color: '#115e59' },
-  nombre: { fontSize: 22, fontWeight: 'bold', color: '#1e1b4b' },
-  edad: { fontSize: 14, color: '#6b7280', marginTop: 2 },
-  insigniaCumple: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#ede9fe', paddingVertical: 5, paddingHorizontal: 10, borderRadius: 12, marginTop: 10 },
-  textoCumple: { fontSize: 12, fontWeight: 'bold', color: '#6d28d9' },
-  tarjeta: { backgroundColor: '#ffffff', borderRadius: 16, padding: 16, marginBottom: 14, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 5, shadowOffset: { width: 0, height: 1 }, elevation: 2 },
-  datoFila: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },
-  datoTexto: { fontSize: 15, color: '#1f2937' },
-  datoEnlace: { fontSize: 15, color: '#115e59' },
-  datoVacio: { fontSize: 15, color: '#9ca3af', fontStyle: 'italic' },
-  tituloSeccion: { fontSize: 18, fontWeight: 'bold', color: '#1e1b4b', marginTop: 10, marginBottom: 10 },
-  filaCita: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
+  tarjetaPerfil: {
+    backgroundColor: '#ffffff',
+    borderRadius: 22,
+    padding: 24,
+    alignItems: 'center',
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#f3f4f6',
+    shadowColor: '#000',
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  avatar: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    backgroundColor: '#FDF2F8',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+    borderWidth: 1.5,
+    borderColor: '#FCE7F3',
+  },
+  textoAvatar: { fontSize: 26, fontWeight: 'bold', color: '#B80065' },
+  nombre: { fontSize: 22, fontWeight: 'bold', color: '#111827' },
+  edad: { fontSize: 13, color: '#6b7280', marginTop: 2 },
+  insigniaCumple: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#FDF2F8',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: '#FCE7F3',
+  },
+  textoCumple: { fontSize: 12, fontWeight: 'bold', color: '#B80065' },
+  tarjeta: {
+    backgroundColor: '#ffffff',
+    borderRadius: 18,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#f3f4f6',
+    shadowColor: '#000',
+    shadowOpacity: 0.02,
+    shadowRadius: 5,
+    elevation: 1,
+  },
+  datoFila: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f9fafb',
+  },
+  infoDato: {
+    flex: 1,
+  },
+  etiquetaDato: {
+    fontSize: 11,
+    color: '#9ca3af',
+    fontWeight: '600',
+  },
+  datoTexto: { fontSize: 14, color: '#111827', marginTop: 2 },
+  datoEnlace: { fontSize: 14, color: '#111827', fontWeight: '500', marginTop: 2 },
+  datoVacio: { fontSize: 13, color: '#9ca3af', fontStyle: 'italic', marginTop: 2 },
+  botonAgendarPrincipal: {
+    backgroundColor: '#B80065',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 52,
+    borderRadius: 16,
+    marginBottom: 20,
+    shadowColor: '#B80065',
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  iconoBotonAgendar: {
+    marginRight: 8,
+  },
+  textoBotonAgendar: {
+    color: '#ffffff',
+    fontWeight: 'bold',
+    fontSize: 15,
+  },
+  tituloSeccion: { fontSize: 16, fontWeight: 'bold', color: '#111827', marginBottom: 10 },
+  filaCita: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f9fafb',
+  },
   columnaFecha: { width: 70 },
-  horaCita: { fontSize: 15, fontWeight: 'bold', color: '#115e59' },
+  horaCita: { fontSize: 14, fontWeight: 'bold', color: '#B80065' },
   diaCita: { fontSize: 11, color: '#6b7280', marginTop: 2 },
   infoCita: { flex: 1 },
-  tipoCita: { fontSize: 14, fontWeight: '600', color: '#1f2937' },
-  notasCita: { fontSize: 12, color: '#6b7280', marginTop: 2 },
-  vacio: { textAlign: 'center', color: '#9ca3af', fontSize: 14, paddingVertical: 10 },
-  botonPrimario: { backgroundColor: '#115e59', paddingVertical: 14, paddingHorizontal: 28, borderRadius: 12, marginTop: 16 },
-  botonPrimarioAncho: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, backgroundColor: '#115e59', padding: 15, borderRadius: 12 },
-  textoPrimario: { color: '#ffffff', fontWeight: 'bold', fontSize: 16 },
-  botonEliminar: { padding: 15, borderRadius: 12, alignItems: 'center', marginTop: 24, borderWidth: 1, borderColor: '#dc2626' },
-  textoEliminar: { color: '#dc2626', fontWeight: 'bold', fontSize: 15 },
+  tipoCita: { fontSize: 13, fontWeight: '600', color: '#111827' },
+  notasCita: { fontSize: 11, color: '#9ca3af', marginTop: 2 },
+  vacio: { textAlign: 'center', color: '#9ca3af', fontSize: 13, paddingVertical: 12 },
+  botonPrimario: { backgroundColor: '#B80065', paddingVertical: 12, paddingHorizontal: 24, borderRadius: 14, marginTop: 16 },
+  textoPrimario: { color: '#ffffff', fontWeight: 'bold', fontSize: 15 },
+  botonEliminar: {
+    padding: 14,
+    borderRadius: 14,
+    alignItems: 'center',
+    marginTop: 10,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#fca5a5',
+    backgroundColor: '#fef2f2',
+  },
+  textoEliminar: { color: '#dc2626', fontWeight: 'bold', fontSize: 14 },
 });

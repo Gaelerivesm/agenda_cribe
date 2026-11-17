@@ -19,13 +19,15 @@ type Direccion = 1 | -1;
 const VISTAS: Vista[] = ['Semana', 'Mes', 'Año'];
 const NOMBRES_MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 const NOMBRES_DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-const LETRAS_DIA = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
+const LETRAS_DIA = ['D', 'L', 'M', 'X', 'J', 'V', 'S'];
 const HORAS_DIA = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, '0')}:00`);
 const ANCHO_PANTALLA = Dimensions.get('window').width;
 
-const COLOR_PRIMARIO = '#115e59';
-const COLOR_OSCURO = '#1e1b4b';
-const COLOR_FONDO = '#fdfbf7';
+const COLOR_PRIMARIO = '#B80065';
+const COLOR_OSCURO = '#111827';
+const COLOR_FONDO = '#FAFAFA';
+const COLOR_ROSA_SUAVE = '#FDF2F8';
+const COLOR_ROSA_BORDE = '#FCE7F3';
 
 const parsearFecha = (texto: string): Date | null => {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(texto.trim());
@@ -42,7 +44,7 @@ const formatearHora = (fecha: Date) =>
   `${String(fecha.getHours()).padStart(2, '0')}:${String(fecha.getMinutes()).padStart(2, '0')}`;
 
 const etiquetaFechaLarga = (fecha: Date, hoyStr: string) => {
-  const base = `${NOMBRES_DIAS[fecha.getDay()]} ${fecha.getDate()} de ${NOMBRES_MESES[fecha.getMonth()].toLowerCase()}`;
+  const base = `${NOMBRES_DIAS[fecha.getDay()]}, ${fecha.getDate()} de ${NOMBRES_MESES[fecha.getMonth()].toLowerCase()}`;
   return formatearFecha(fecha) === hoyStr ? `Hoy · ${base}` : base;
 };
 
@@ -317,7 +319,9 @@ export default function PantallaCalendario() {
               const esHoy = str === hoyStr;
               return (
                 <TouchableOpacity key={index} style={styles.columnaDia} onPress={() => setFechaActiva(dia)}>
-                  <Text style={[styles.letraDia, seleccionado && styles.letraDiaSeleccionada]}>{LETRAS_DIA[dia.getDay()]}</Text>
+                  <Text style={[styles.letraDia, seleccionado && styles.letraDiaSeleccionada]}>
+                    {LETRAS_DIA[dia.getDay()]}
+                  </Text>
                   <View style={[styles.circuloDia, seleccionado && styles.circuloSeleccionado]}>
                     <Text
                       style={[
@@ -349,29 +353,35 @@ export default function PantallaCalendario() {
                   <View style={styles.contenedorCita}>
                     {citasHora.length > 0 ? (
                       citasHora.map(cita => (
-                        <View key={cita.id} style={styles.tarjetaCita}>
-                          <View style={styles.barraLateral} />
-                          <View style={styles.infoCita}>
-                            <Text style={styles.nombrePaciente}>
-                              {cita.paciente} <Text style={styles.horaExacta}>{cita.hora}</Text>
-                            </Text>
-                            <Text style={styles.tipoCita}>{cita.tipo}</Text>
+                        <View key={cita.id} style={styles.tarjetaCitaTimeline}>
+                          <View style={styles.barraLateralCita} />
+                          <View style={styles.infoCitaTimeline}>
+                            <View style={styles.filaBadgeHora}>
+                              <Text style={styles.horaExactaCita}>{cita.hora} hrs</Text>
+                              <View style={styles.badgeEnCurso}>
+                                <Text style={styles.textoBadgeEnCurso}>
+                                  {cita.confirmada ? 'Confirmada' : 'En curso'}
+                                </Text>
+                              </View>
+                            </View>
+                            <Text style={styles.nombrePacienteCitaTimeline}>{cita.paciente}</Text>
+                            <Text style={styles.tipoCitaTimeline}>{cita.tipo}</Text>
                             {cita.notas.length > 0 ? (
-                              <Text style={styles.notasCita} numberOfLines={1}>{cita.notas}</Text>
+                              <Text style={styles.notasCitaTimeline} numberOfLines={1}>{cita.notas}</Text>
                             ) : null}
                           </View>
-                          <View style={styles.accionesCita}>
-                            {cita.confirmada ? (
-                              <Ionicons name="checkmark-circle" size={18} color="#10b981" style={styles.iconoConfirmada} />
-                            ) : null}
+                          <View style={styles.accionesCitaTimeline}>
                             <TouchableOpacity
-                              style={styles.botonAccion}
+                              style={styles.botonAccionIcono}
                               onPress={() => navigation.navigate('NotasSesion', { cita, modo: 'ver' })}
                             >
-                              <Ionicons name="eye-outline" size={20} color={COLOR_PRIMARIO} />
+                              <Ionicons name="eye-outline" size={18} color="#B80065" />
                             </TouchableOpacity>
-                            <TouchableOpacity style={styles.botonAccion} onPress={() => abrirModalEditar(cita)}>
-                              <Ionicons name="pencil-outline" size={20} color={COLOR_PRIMARIO} />
+                            <TouchableOpacity
+                              style={styles.botonAccionIcono}
+                              onPress={() => abrirModalEditar(cita)}
+                            >
+                              <Ionicons name="pencil-outline" size={18} color="#B80065" />
                             </TouchableOpacity>
                           </View>
                         </View>
@@ -397,8 +407,8 @@ export default function PantallaCalendario() {
     return (
       <View style={styles.flex}>
         <View style={styles.cabeceraSemana}>
-          {['DOM', 'LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB'].map(d => (
-            <Text key={d} style={styles.textoCabeceraDia}>{d}</Text>
+          {['D', 'L', 'M', 'X', 'J', 'V', 'S'].map((d, index) => (
+            <Text key={index} style={styles.textoCabeceraDia}>{d}</Text>
           ))}
         </View>
         {filas.map((fila, i) => (
@@ -475,11 +485,27 @@ export default function PantallaCalendario() {
 
   return (
     <View style={[styles.contenedor, { paddingTop: insets.top + 10 }]}>
-      <View style={styles.encabezado}>
-        <Text style={styles.tituloFecha}>
-          {vistaActiva !== 'Año' ? `${NOMBRES_MESES[fechaActiva.getMonth()]} ` : ''}
-          <Text style={styles.tituloAnio}>{fechaActiva.getFullYear()}</Text>
-        </Text>
+      {/* Encabezado: TU AGENDA / Noviembre 2026 */}
+      <View style={styles.encabezadoPrincipal}>
+        <View>
+          <Text style={styles.etiquetaSuperior}>TU AGENDA</Text>
+          <View style={styles.filaTituloNavegacion}>
+            <Text style={styles.tituloFechaMes}>
+              {vistaActiva !== 'Año' ? `${NOMBRES_MESES[fechaActiva.getMonth()]} ` : ''}
+              <Text style={styles.tituloAnio}>{fechaActiva.getFullYear()}</Text>
+            </Text>
+            <View style={styles.controlesFlechas}>
+              <TouchableOpacity onPress={() => moverMeses(-1)} style={styles.botonFlecha}>
+                <Ionicons name="chevron-back" size={18} color="#4b5563" />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => moverMeses(1)} style={styles.botonFlecha}>
+                <Ionicons name="chevron-forward" size={18} color="#4b5563" />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+
+        {/* Selector de Vista: Semana | Mes | Año */}
         <View style={styles.selectorVista}>
           {VISTAS.map(vista => (
             <TouchableOpacity
@@ -501,10 +527,12 @@ export default function PantallaCalendario() {
         )}
       </Animated.View>
 
+      {/* FAB Magenta */}
       <TouchableOpacity style={styles.botonFlotante} onPress={() => abrirModalNueva()}>
-        <Ionicons name="add" size={30} color="#ffffff" />
+        <Ionicons name="add" size={32} color="#ffffff" />
       </TouchableOpacity>
 
+      {/* Modal de Nueva Cita / Editar */}
       <Modal visible={modalVisible} animationType="slide" transparent onRequestClose={() => setModalVisible(false)}>
         <KeyboardAvoidingView
           style={styles.modalFondo}
@@ -583,7 +611,8 @@ export default function PantallaCalendario() {
                 <Switch
                   value={formConfirmada}
                   onValueChange={setFormConfirmada}
-                  trackColor={{ true: COLOR_PRIMARIO, false: '#d1d5db' }}
+                  trackColor={{ true: COLOR_PRIMARIO, false: '#e5e7eb' }}
+                  thumbColor={formConfirmada ? '#ffffff' : '#f4f3f4'}
                 />
               </View>
 
@@ -609,62 +638,317 @@ export default function PantallaCalendario() {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   contenedor: { flex: 1, backgroundColor: COLOR_FONDO },
-  encabezado: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 16 },
-  tituloFecha: { fontSize: 26, fontWeight: 'bold', color: COLOR_OSCURO },
-  tituloAnio: { color: COLOR_PRIMARIO },
-  selectorVista: { flexDirection: 'row', backgroundColor: '#f3f4f6', borderRadius: 20, padding: 4 },
-  botonVista: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 16 },
-  botonVistaActivo: { backgroundColor: '#ffffff', elevation: 2, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 2, shadowOffset: { width: 0, height: 1 } },
-  textoVista: { fontSize: 12, color: '#6b7280', fontWeight: 'bold' },
-  textoVistaActivo: { color: COLOR_PRIMARIO },
+  encabezadoPrincipal: {
+    paddingHorizontal: 20,
+    marginBottom: 16,
+  },
+  etiquetaSuperior: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: '#9ca3af',
+    letterSpacing: 1,
+    marginBottom: 2,
+  },
+  filaTituloNavegacion: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  tituloFechaMes: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: COLOR_OSCURO,
+  },
+  tituloAnio: {
+    color: COLOR_PRIMARIO,
+  },
+  controlesFlechas: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  botonFlecha: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#ffffff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  selectorVista: {
+    flexDirection: 'row',
+    backgroundColor: '#f3f4f6',
+    borderRadius: 16,
+    padding: 3,
+  },
+  botonVista: {
+    flex: 1,
+    paddingVertical: 7,
+    borderRadius: 14,
+    alignItems: 'center',
+  },
+  botonVistaActivo: {
+    backgroundColor: '#ffffff',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+  },
+  textoVista: {
+    fontSize: 13,
+    color: '#6b7280',
+    fontWeight: '600',
+  },
+  textoVistaActivo: {
+    color: COLOR_PRIMARIO,
+    fontWeight: 'bold',
+  },
 
-  contenedorFranja: { borderBottomWidth: 1, borderBottomColor: '#e5e7eb', paddingBottom: 12 },
-  franjaSemana: { flexDirection: 'row', justifyContent: 'space-around', paddingHorizontal: 10 },
-  columnaDia: { alignItems: 'center', width: 44 },
-  letraDia: { fontSize: 11, color: '#9ca3af', marginBottom: 8, fontWeight: '600' },
-  letraDiaSeleccionada: { color: COLOR_PRIMARIO },
-  circuloDia: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
-  circuloSeleccionado: { backgroundColor: COLOR_PRIMARIO },
-  numeroDia: { fontSize: 16, fontWeight: '500', color: COLOR_OSCURO },
-  numeroHoy: { color: COLOR_PRIMARIO, fontWeight: 'bold' },
-  numeroSeleccionado: { color: '#ffffff', fontWeight: 'bold' },
-  contenedorPuntos: { flexDirection: 'row', marginTop: 5, height: 5, justifyContent: 'center', gap: 3 },
-  punto: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: COLOR_PRIMARIO },
-  etiquetaFecha: { fontSize: 13, fontWeight: 'bold', color: '#6b7280', paddingHorizontal: 20, marginVertical: 12 },
+  contenedorFranja: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+    paddingBottom: 12,
+  },
+  franjaSemana: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingHorizontal: 10,
+  },
+  columnaDia: {
+    alignItems: 'center',
+    width: 44,
+  },
+  letraDia: {
+    fontSize: 12,
+    color: '#9ca3af',
+    marginBottom: 8,
+    fontWeight: '600',
+  },
+  letraDiaSeleccionada: {
+    color: COLOR_PRIMARIO,
+  },
+  circuloDia: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  circuloSeleccionado: {
+    backgroundColor: COLOR_PRIMARIO,
+  },
+  numeroDia: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: COLOR_OSCURO,
+  },
+  numeroHoy: {
+    color: COLOR_PRIMARIO,
+    fontWeight: 'bold',
+  },
+  numeroSeleccionado: {
+    color: '#ffffff',
+    fontWeight: 'bold',
+  },
+  contenedorPuntos: {
+    flexDirection: 'row',
+    marginTop: 5,
+    height: 5,
+    justifyContent: 'center',
+    gap: 3,
+  },
+  punto: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: COLOR_PRIMARIO,
+  },
+  etiquetaFecha: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: '#6b7280',
+    paddingHorizontal: 20,
+    marginVertical: 12,
+  },
 
-  scrollTimeline: { paddingHorizontal: 20, paddingBottom: 110 },
-  filaHora: { flexDirection: 'row', minHeight: 65, alignItems: 'flex-start' },
-  textoHora: { width: 50, fontSize: 12, fontWeight: '500', color: '#9ca3af', marginTop: 10 },
-  contenedorCita: { flex: 1, paddingLeft: 10, borderLeftWidth: 1, borderLeftColor: '#e5e7eb' },
-  tarjetaCita: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#ffffff', borderRadius: 14, marginVertical: 5, padding: 12, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 5, shadowOffset: { width: 0, height: 1 }, elevation: 2 },
-  barraLateral: { width: 4, alignSelf: 'stretch', backgroundColor: COLOR_PRIMARIO, borderRadius: 2, marginRight: 12 },
-  infoCita: { flex: 1 },
-  nombrePaciente: { fontSize: 15, fontWeight: 'bold', color: COLOR_OSCURO },
-  horaExacta: { fontSize: 12, color: COLOR_PRIMARIO, fontWeight: 'bold' },
-  tipoCita: { fontSize: 13, color: COLOR_PRIMARIO, marginTop: 2 },
-  notasCita: { fontSize: 12, color: '#6b7280', marginTop: 2 },
-  accionesCita: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  iconoConfirmada: { marginRight: 2 },
-  botonAccion: { backgroundColor: '#f3f4f6', padding: 7, borderRadius: 8 },
-  lineaLibre: { height: 1, backgroundColor: '#f3f4f6', marginTop: 20 },
+  scrollTimeline: {
+    paddingHorizontal: 20,
+    paddingBottom: 110,
+  },
+  filaHora: {
+    flexDirection: 'row',
+    minHeight: 70,
+    alignItems: 'flex-start',
+  },
+  textoHora: {
+    width: 50,
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#9ca3af',
+    marginTop: 8,
+  },
+  contenedorCita: {
+    flex: 1,
+    paddingLeft: 12,
+    borderLeftWidth: 1,
+    borderLeftColor: '#f3f4f6',
+  },
+  tarjetaCitaTimeline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLOR_ROSA_SUAVE,
+    borderRadius: 16,
+    marginVertical: 5,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: COLOR_ROSA_BORDE,
+  },
+  barraLateralCita: {
+    width: 4,
+    alignSelf: 'stretch',
+    backgroundColor: COLOR_PRIMARIO,
+    borderRadius: 2,
+    marginRight: 12,
+  },
+  infoCitaTimeline: {
+    flex: 1,
+  },
+  filaBadgeHora: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  horaExactaCita: {
+    fontSize: 12,
+    color: COLOR_PRIMARIO,
+    fontWeight: 'bold',
+  },
+  badgeEnCurso: {
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  textoBadgeEnCurso: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: COLOR_PRIMARIO,
+  },
+  nombrePacienteCitaTimeline: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: COLOR_OSCURO,
+  },
+  tipoCitaTimeline: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginTop: 2,
+  },
+  notasCitaTimeline: {
+    fontSize: 11,
+    color: '#9ca3af',
+    marginTop: 2,
+  },
+  accionesCitaTimeline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginLeft: 8,
+  },
+  botonAccionIcono: {
+    backgroundColor: '#ffffff',
+    padding: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#fce7f3',
+  },
+  lineaLibre: {
+    height: 1,
+    backgroundColor: '#f9fafb',
+    marginTop: 18,
+  },
 
-  cabeceraSemana: { flexDirection: 'row', paddingHorizontal: 15, marginBottom: 8 },
-  textoCabeceraDia: { flex: 1, textAlign: 'center', fontSize: 10, color: '#9ca3af', fontWeight: 'bold' },
-  filaMes: { flexDirection: 'row', paddingHorizontal: 15 },
-  celdaMes: { flex: 1, height: 64, alignItems: 'center', paddingTop: 4 },
-  circuloMes: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
-  numeroMes: { fontSize: 16, color: COLOR_OSCURO },
+  cabeceraSemana: {
+    flexDirection: 'row',
+    paddingHorizontal: 15,
+    marginBottom: 8,
+  },
+  textoCabeceraDia: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 11,
+    color: '#9ca3af',
+    fontWeight: 'bold',
+  },
+  filaMes: {
+    flexDirection: 'row',
+    paddingHorizontal: 15,
+  },
+  celdaMes: {
+    flex: 1,
+    height: 60,
+    alignItems: 'center',
+    paddingTop: 4,
+  },
+  circuloMes: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  numeroMes: {
+    fontSize: 15,
+    color: COLOR_OSCURO,
+  },
 
-  cuadriculaAnio: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', paddingHorizontal: 15, paddingBottom: 110 },
-  miniMes: { width: '31%', marginBottom: 22 },
-  miniMesTitulo: { fontSize: 14, fontWeight: 'bold', color: COLOR_PRIMARIO, marginBottom: 6 },
+  cuadriculaAnio: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    paddingHorizontal: 15,
+    paddingBottom: 110,
+  },
+  miniMes: {
+    width: '31%',
+    marginBottom: 20,
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 8,
+    borderWidth: 1,
+    borderColor: '#f3f4f6',
+  },
+  miniMesTitulo: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: COLOR_PRIMARIO,
+    marginBottom: 6,
+  },
   miniFila: { flexDirection: 'row' },
   miniCabecera: { flex: 1, fontSize: 8, color: '#9ca3af', textAlign: 'center', marginBottom: 2 },
   miniCelda: { flex: 1, height: 16, alignItems: 'center', justifyContent: 'center' },
-  miniCirculo: { width: 15, height: 15, borderRadius: 7.5, alignItems: 'center', justifyContent: 'center' },
+  miniCirculo: { width: 14, height: 14, borderRadius: 7, alignItems: 'center', justifyContent: 'center' },
   miniNumero: { fontSize: 8, color: COLOR_OSCURO },
 
-  botonFlotante: { position: 'absolute', bottom: 20, right: 20, backgroundColor: COLOR_PRIMARIO, width: 60, height: 60, borderRadius: 30, justifyContent: 'center', alignItems: 'center', elevation: 5, shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 4, shadowOffset: { width: 0, height: 2 } },
+  botonFlotante: {
+    position: 'absolute',
+    bottom: 24,
+    right: 20,
+    backgroundColor: COLOR_PRIMARIO,
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 6,
+    shadowColor: COLOR_PRIMARIO,
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+  },
 
   modalFondo: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   modalContenedor: { backgroundColor: '#ffffff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: '92%' },
@@ -672,8 +956,8 @@ const styles = StyleSheet.create({
   modalTitulo: { fontSize: 20, fontWeight: 'bold', color: COLOR_OSCURO },
   filaInputs: { flexDirection: 'row', justifyContent: 'space-between' },
   mitadInput: { width: '48%' },
-  label: { fontSize: 13, fontWeight: 'bold', color: '#6b7280', marginBottom: 5 },
-  input: { backgroundColor: '#f9fafb', borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, padding: 12, marginBottom: 14, color: COLOR_OSCURO },
+  label: { fontSize: 13, fontWeight: 'bold', color: '#374151', marginBottom: 5 },
+  input: { backgroundColor: '#f9fafb', borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 14, padding: 12, marginBottom: 14, color: COLOR_OSCURO },
   inputArea: { height: 90, textAlignVertical: 'top' },
   campoSelector: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   campoActivo: { borderColor: COLOR_PRIMARIO },
@@ -684,9 +968,9 @@ const styles = StyleSheet.create({
   textoBotonListo: { color: COLOR_PRIMARIO, fontWeight: 'bold', fontSize: 15 },
   filaSwitch: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   labelSwitch: { fontSize: 14, fontWeight: 'bold', color: COLOR_OSCURO },
-  botonGuardar: { backgroundColor: COLOR_PRIMARIO, padding: 15, borderRadius: 12, alignItems: 'center' },
+  botonGuardar: { backgroundColor: COLOR_PRIMARIO, padding: 15, borderRadius: 14, alignItems: 'center' },
   textoBotonGuardar: { color: '#ffffff', fontWeight: 'bold', fontSize: 16 },
-  botonEliminar: { padding: 15, borderRadius: 12, alignItems: 'center', marginTop: 10, marginBottom: 20, borderWidth: 1, borderColor: '#dc2626' },
+  botonEliminar: { padding: 15, borderRadius: 14, alignItems: 'center', marginTop: 10, marginBottom: 20, borderWidth: 1, borderColor: '#dc2626' },
   textoBotonEliminar: { color: '#dc2626', fontWeight: 'bold', fontSize: 15 },
   espacioFinal: { height: 20 },
 });

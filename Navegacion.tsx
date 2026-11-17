@@ -49,12 +49,28 @@ export default function NavegacionPrincipal({ onCerrarSesion }: NavegacionPrinci
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
-        tabBarIcon: ({ color, size }) => (
-          <Ionicons name={ICONOS[route.name]} size={size} color={color} />
+        tabBarIcon: ({ color, size, focused }) => (
+          <Ionicons
+            name={focused ? ICONOS[route.name] : (`${ICONOS[route.name]}-outline` as any)}
+            size={size}
+            color={color}
+          />
         ),
-        tabBarActiveTintColor: '#115e59',
-        tabBarInactiveTintColor: 'gray',
+        tabBarActiveTintColor: '#B80065',
+        tabBarInactiveTintColor: '#9ca3af',
         headerShown: false,
+        tabBarStyle: {
+          backgroundColor: '#ffffff',
+          borderTopColor: '#f3f4f6',
+          borderTopWidth: 1,
+          height: 60,
+          paddingBottom: 8,
+          paddingTop: 6,
+        },
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: '600',
+        },
       })}
     >
       <Tab.Screen name="Inicio" component={PantallaInicio} />

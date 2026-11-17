@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CitasContext, Cita, formatearFecha } from './CitasContext';
 import { PacientesContext, Paciente, diasParaCumple, edadQueCumple } from './PacientesContext';
 import { RootTabParamList } from './tiposNavegacion';
-import { marcaAhora, marcaTiempo, etiquetaRelativa } from './utilidades';
+import { marcaAhora, marcaTiempo, etiquetaRelativa, fechaCorta } from './utilidades';
 
 type NombreIcono = keyof typeof Ionicons.glyphMap;
 
@@ -35,7 +35,7 @@ export default function PantallaNotificaciones() {
 
     const cumples: CumpleProximo[] = pacientes
       .map(p => ({ paciente: p, dias: diasParaCumple(p.fechaNacimiento), edad: edadQueCumple(p.fechaNacimiento) }))
-      .filter((c): c is CumpleProximo => c.dias !== null && c.dias <= 7)
+      .filter((c): c is CumpleProximo => c.dias !== null && c.dias <= 14)
       .sort((a, b) => a.dias - b.dias);
 
     return {
@@ -59,9 +59,9 @@ export default function PantallaNotificaciones() {
   };
 
   const textoCumple = (dias: number) => {
-    if (dias === 0) return 'hoy';
-    if (dias === 1) return 'mañana';
-    return `en ${dias} días`;
+    if (dias === 0) return 'Hoy';
+    if (dias === 1) return 'Mañana';
+    return `En ${dias} días`;
   };
 
   const renderTarjeta = (
@@ -76,7 +76,7 @@ export default function PantallaNotificaciones() {
   ) => (
     <TouchableOpacity key={clave} style={styles.tarjeta} onPress={alPresionar}>
       <View style={[styles.circuloIcono, { backgroundColor: colorFondo }]}>
-        <Ionicons name={icono} size={22} color={colorIcono} />
+        <Ionicons name={icono} size={20} color={colorIcono} />
       </View>
       <View style={styles.infoTarjeta}>
         <Text style={styles.tituloTarjeta}>{titulo}</Text>
@@ -116,10 +116,10 @@ export default function PantallaNotificaciones() {
               renderTarjeta(
                 `hoy-${c.id}`,
                 'time-outline',
-                '#115e59',
-                '#d1fae5',
-                `${c.hora} · ${c.paciente}`,
-                c.tipo,
+                '#B80065',
+                '#FDF2F8',
+                `${c.hora} hrs`,
+                `${c.paciente} · ${c.tipo}`,
                 () => abrirCita(c)
               )
             )}
@@ -133,10 +133,10 @@ export default function PantallaNotificaciones() {
               renderTarjeta(
                 `conf-${c.id}`,
                 'alert-circle-outline',
-                '#b45309',
-                '#fef3c7',
+                '#B80065',
+                '#FDF2F8',
                 c.paciente,
-                `${etiquetaRelativa(c.fecha)} a las ${c.hora} · ${c.tipo}`,
+                `${etiquetaRelativa(c.fecha)}, ${c.hora} · ${c.tipo}`,
                 () => abrirCita(c),
                 { texto: 'Confirmar', alPresionar: () => confirmarCita(c) }
               )
@@ -151,10 +151,10 @@ export default function PantallaNotificaciones() {
               renderTarjeta(
                 `cumple-${c.paciente.id}`,
                 'gift-outline',
-                '#6d28d9',
-                '#ede9fe',
+                '#B80065',
+                '#FDF2F8',
                 c.paciente.nombre,
-                `Cumple ${c.edad ?? ''} años ${textoCumple(c.dias)}`,
+                `${fechaCorta(c.paciente.fechaNacimiento)} · ${textoCumple(c.dias)}`,
                 () => abrirPaciente(c.paciente.id)
               )
             )}
@@ -166,18 +166,45 @@ export default function PantallaNotificaciones() {
 }
 
 const styles = StyleSheet.create({
-  contenedor: { flex: 1, backgroundColor: '#fdfbf7' },
+  contenedor: { flex: 1, backgroundColor: '#FAFAFA' },
   encabezado: { paddingHorizontal: 20, marginBottom: 16 },
-  titulo: { fontSize: 26, fontWeight: 'bold', color: '#1e1b4b' },
+  titulo: { fontSize: 26, fontWeight: 'bold', color: '#111827' },
   scroll: { paddingHorizontal: 20, paddingBottom: 40 },
   seccion: { marginBottom: 22 },
-  tituloSeccion: { fontSize: 18, fontWeight: 'bold', color: '#1e1b4b', marginBottom: 12 },
-  tarjeta: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#ffffff', borderRadius: 16, padding: 14, marginBottom: 10, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 5, shadowOffset: { width: 0, height: 1 }, elevation: 2 },
-  circuloIcono: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', marginRight: 14 },
+  tituloSeccion: { fontSize: 16, fontWeight: 'bold', color: '#111827', marginBottom: 12 },
+  tarjeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderRadius: 18,
+    padding: 14,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#f3f4f6',
+    shadowColor: '#000',
+    shadowOpacity: 0.02,
+    shadowRadius: 5,
+    elevation: 1,
+  },
+  circuloIcono: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
+    borderWidth: 1,
+    borderColor: '#FCE7F3',
+  },
   infoTarjeta: { flex: 1 },
-  tituloTarjeta: { fontSize: 15, fontWeight: 'bold', color: '#1e1b4b' },
+  tituloTarjeta: { fontSize: 15, fontWeight: 'bold', color: '#111827' },
   detalleTarjeta: { fontSize: 13, color: '#6b7280', marginTop: 2 },
-  botonAccion: { backgroundColor: '#115e59', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10 },
+  botonAccion: {
+    backgroundColor: '#B80065',
+    paddingVertical: 7,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+  },
   textoAccion: { color: '#ffffff', fontSize: 12, fontWeight: 'bold' },
   vacioContenedor: { alignItems: 'center', marginTop: 80 },
   vacioTitulo: { fontSize: 18, fontWeight: 'bold', color: '#374151', marginTop: 12 },

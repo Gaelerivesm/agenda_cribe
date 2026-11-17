@@ -5,7 +5,7 @@ interface Props {
   color?: string;
 }
 
-export default function LogoPsicologia({ tamano = 72, color = "#8A217A" }: Props) {
+export default function LogoPsicologia({ tamano = 72, color = "#B80065" }: Props) {
   return (
     <Svg width={tamano} height={tamano} viewBox="0 0 100 100">
       <Path

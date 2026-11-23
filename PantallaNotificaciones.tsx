@@ -1,12 +1,13 @@
 import React, { useContext, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation, NavigationProp } from '@react-navigation/native';
+import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CitasContext, Cita, formatearFecha } from './CitasContext';
 import { PacientesContext, Paciente, diasParaCumple, edadQueCumple } from './PacientesContext';
-import { RootTabParamList } from './tiposNavegacion';
 import { marcaAhora, marcaTiempo, etiquetaRelativa, fechaCorta } from './utilidades';
+import { useAuth } from './AuthContext';
+import { obtenerPaleta } from './tema';
 
 type NombreIcono = keyof typeof Ionicons.glyphMap;
 
@@ -17,8 +18,10 @@ interface CumpleProximo {
 }
 
 export default function PantallaNotificaciones() {
-  const navigation = useNavigation<NavigationProp<RootTabParamList>>();
   const insets = useSafeAreaInsets();
+  const { usuarioActual } = useAuth();
+  const paleta = obtenerPaleta(usuarioActual?.paleta);
+  const styles = useMemo(() => crearStyles(paleta), [paleta]);
 
   const citasContext = useContext(CitasContext);
   const pacientesContext = useContext(PacientesContext);
@@ -35,7 +38,7 @@ export default function PantallaNotificaciones() {
 
     const cumples: CumpleProximo[] = pacientes
       .map(p => ({ paciente: p, dias: diasParaCumple(p.fechaNacimiento), edad: edadQueCumple(p.fechaNacimiento) }))
-      .filter((c): c is CumpleProximo => c.dias !== null && c.dias <= 14)
+      .filter((c): c is CumpleProximo => c.dias !== null && c.dias <= 30)
       .sort((a, b) => a.dias - b.dias);
 
     return {
@@ -46,11 +49,11 @@ export default function PantallaNotificaciones() {
   }, [citas, pacientes]);
 
   const abrirCita = (cita: Cita) => {
-    navigation.navigate('Calendario', { screen: 'NotasSesion', params: { cita, modo: 'ver' } });
+    router.push({ pathname: '/notas/[citaId]', params: { citaId: cita.id, modo: 'ver' } });
   };
 
   const abrirPaciente = (id: string) => {
-    navigation.navigate('Pacientes', { screen: 'FichaPaciente', params: { pacienteId: id } });
+    router.push({ pathname: '/paciente/[pacienteId]', params: { pacienteId: id } });
   };
 
   const confirmarCita = (cita: Cita) => {
@@ -116,8 +119,8 @@ export default function PantallaNotificaciones() {
               renderTarjeta(
                 `hoy-${c.id}`,
                 'time-outline',
-                '#B80065',
-                '#FDF2F8',
+                paleta.primaria,
+                paleta.suave,
                 `${c.hora} hrs`,
                 `${c.paciente} · ${c.tipo}`,
                 () => abrirCita(c)
@@ -133,8 +136,8 @@ export default function PantallaNotificaciones() {
               renderTarjeta(
                 `conf-${c.id}`,
                 'alert-circle-outline',
-                '#B80065',
-                '#FDF2F8',
+                paleta.primaria,
+                paleta.suave,
                 c.paciente,
                 `${etiquetaRelativa(c.fecha)}, ${c.hora} · ${c.tipo}`,
                 () => abrirCita(c),
@@ -151,8 +154,8 @@ export default function PantallaNotificaciones() {
               renderTarjeta(
                 `cumple-${c.paciente.id}`,
                 'gift-outline',
-                '#B80065',
-                '#FDF2F8',
+                paleta.primaria,
+                paleta.suave,
                 c.paciente.nombre,
                 `${fechaCorta(c.paciente.fechaNacimiento)} · ${textoCumple(c.dias)}`,
                 () => abrirPaciente(c.paciente.id)
@@ -165,7 +168,7 @@ export default function PantallaNotificaciones() {
   );
 }
 
-const styles = StyleSheet.create({
+const crearStyles = (paleta: ReturnType<typeof obtenerPaleta>) => StyleSheet.create({
   contenedor: { flex: 1, backgroundColor: '#FAFAFA' },
   encabezado: { paddingHorizontal: 20, marginBottom: 16 },
   titulo: { fontSize: 26, fontWeight: 'bold', color: '#111827' },
@@ -194,13 +197,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 14,
     borderWidth: 1,
-    borderColor: '#FCE7F3',
+    borderColor: paleta.borde,
   },
   infoTarjeta: { flex: 1 },
   tituloTarjeta: { fontSize: 15, fontWeight: 'bold', color: '#111827' },
   detalleTarjeta: { fontSize: 13, color: '#6b7280', marginTop: 2 },
   botonAccion: {
-    backgroundColor: '#B80065',
+    backgroundColor: paleta.primaria,
     paddingVertical: 7,
     paddingHorizontal: 14,
     borderRadius: 12,

@@ -1,21 +1,23 @@
 import React, { useContext, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation, NavigationProp } from '@react-navigation/native';
+import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from './AuthContext';
 import { CitasContext, Cita, formatearFecha } from './CitasContext';
 import { PacientesContext } from './PacientesContext';
-import { RootTabParamList } from './tiposNavegacion';
-import FormularioPaciente from './Formulariopaciente';
-import { iniciales, fechaLarga } from './utilidades';
+import { diasParaCumple, edadQueCumple } from './PacientesContext';
+import AgendarCitaModal from './AgendarCitaModal';
+import { obtenerPaleta } from './tema';
+import { iniciales, fechaLarga, fechaCorta } from './utilidades';
 
 const DIAS_SEMANA = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
 export default function PantallaInicio() {
-  const navigation = useNavigation<NavigationProp<RootTabParamList>>();
   const insets = useSafeAreaInsets();
   const { usuarioActual } = useAuth();
+  const paleta = obtenerPaleta(usuarioActual?.paleta);
+  const styles = useMemo(() => crearStyles(paleta), [paleta]);
 
   const context = useContext(CitasContext);
   if (!context) throw new Error('CitasContext no está disponible');
@@ -23,10 +25,10 @@ export default function PantallaInicio() {
 
   const pacientesContext = useContext(PacientesContext);
   if (!pacientesContext) throw new Error('PacientesContext no está disponible');
-  const { pacientes, agregarPaciente, recargar: recargarPacientes } = pacientesContext;
+  const { pacientes, recargar: recargarPacientes } = pacientesContext;
 
   const [refrescando, setRefrescando] = useState(false);
-  const [modalNuevoPaciente, setModalNuevoPaciente] = useState(false);
+  const [modalNuevaCita, setModalNuevaCita] = useState(false);
 
   const alRefrescar = async () => {
     setRefrescando(true);
@@ -59,13 +61,20 @@ export default function PantallaInicio() {
     };
   }, [citas, hoyStr, marcaAhora]);
 
+  const cumpleanosProximos = useMemo(() => pacientes
+    .map(paciente => ({
+      paciente,
+      dias: diasParaCumple(paciente.fechaNacimiento),
+      edad: edadQueCumple(paciente.fechaNacimiento),
+    }))
+    .filter(item => item.dias !== null && item.dias <= 30)
+    .sort((a, b) => (a.dias ?? 0) - (b.dias ?? 0)), [pacientes]);
+
   const abrirCita = (cita: Cita) => {
-    navigation.navigate('Calendario', { screen: 'NotasSesion', params: { cita, modo: 'ver' } });
+    router.push({ pathname: '/notas/[citaId]', params: { citaId: cita.id, modo: 'ver' } });
   };
 
-  const abrirNuevaCita = () => {
-    navigation.navigate('Calendario', { screen: 'VistaCalendario', params: { nuevaCita: true } });
-  };
+  const abrirNuevaCita = () => setModalNuevaCita(true);
 
   const inicialesDoctor = usuarioActual?.nombre ? iniciales(usuarioActual.nombre) : 'DR';
 
@@ -75,18 +84,18 @@ export default function PantallaInicio() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollPrincipal}
         refreshControl={
-          <RefreshControl refreshing={refrescando} onRefresh={alRefrescar} colors={['#B80065']} tintColor="#B80065" />
+          <RefreshControl refreshing={refrescando} onRefresh={alRefrescar} colors={[paleta.primaria]} tintColor={paleta.primaria} />
         }
       >
         {/* Cabecera con saludo, fecha y avatar de iniciales */}
         <View style={styles.encabezado}>
           <View style={styles.infoSaludo}>
-            <Text style={styles.saludo}>Hola, {usuarioActual?.nombre || 'Dr. Alejandro'}</Text>
+            <Text style={styles.saludo}>Hola, {usuarioActual?.nombre || 'Profesional'}</Text>
             <Text style={styles.subtituloFecha}>{fechaTextoHoy}</Text>
           </View>
           <TouchableOpacity
             style={styles.avatarBoton}
-            onPress={() => navigation.navigate('Perfil')}
+            onPress={() => router.navigate('/(tabs)/perfil')}
           >
             <Text style={styles.avatarTexto}>{inicialesDoctor}</Text>
           </TouchableOpacity>
@@ -119,7 +128,7 @@ export default function PantallaInicio() {
           <TouchableOpacity style={styles.tarjetaProximaCita} onPress={() => abrirCita(proximaCita)}>
             <View style={styles.filaCabeceraCita}>
               <View style={styles.circuloReloj}>
-                <Ionicons name="time-outline" size={20} color="#B80065" />
+                <Ionicons name="time-outline" size={20} color={paleta.primaria} />
               </View>
               <View style={styles.infoPacienteCita}>
                 <Text style={styles.nombrePacienteCita}>{proximaCita.paciente}</Text>
@@ -143,73 +152,49 @@ export default function PantallaInicio() {
           </View>
         )}
 
-        {/* Acciones Rápidas (Grid 2x2 funcional) */}
-        <View style={styles.gridAcciones}>
-          {/* Botón 1: Nuevo Paciente */}
-          <TouchableOpacity
-            style={styles.botonAccionGrid}
-            onPress={() => setModalNuevoPaciente(true)}
-          >
-            <View style={styles.iconoAccionContenedor}>
-              <Ionicons name="person-add-outline" size={22} color="#B80065" />
-            </View>
-            <Text style={styles.textoAccionGrid}>Nuevo paciente</Text>
-          </TouchableOpacity>
-
-          {/* Botón 2: Agendar Cita */}
-          <TouchableOpacity
-            style={styles.botonAccionGrid}
-            onPress={abrirNuevaCita}
-          >
-            <View style={styles.iconoAccionContenedor}>
-              <Ionicons name="calendar-outline" size={22} color="#B80065" />
-            </View>
-            <Text style={styles.textoAccionGrid}>Agendar cita</Text>
-          </TouchableOpacity>
-
-          {/* Botón 3: Calendario */}
-          <TouchableOpacity
-            style={styles.botonAccionGrid}
-            onPress={() => navigation.navigate('Calendario')}
-          >
-            <View style={styles.iconoAccionContenedor}>
-              <Ionicons name="calendar" size={22} color="#B80065" />
-            </View>
-            <Text style={styles.textoAccionGrid}>Calendario</Text>
-          </TouchableOpacity>
-
-          {/* Botón 4: Notificaciones */}
-          <TouchableOpacity
-            style={styles.botonAccionGrid}
-            onPress={() => navigation.navigate('Notificaciones')}
-          >
-            <View style={styles.iconoAccionContenedor}>
-              <Ionicons name="notifications-outline" size={22} color="#B80065" />
-            </View>
-            <Text style={styles.textoAccionGrid}>Notificaciones</Text>
-          </TouchableOpacity>
-        </View>
+        <Text style={styles.seccionTitulo}>Cumpleaños en los próximos 30 días</Text>
+        {cumpleanosProximos.length > 0 ? (
+          <View style={styles.tarjetaCumpleanos}>
+            {cumpleanosProximos.map(({ paciente, dias, edad }) => (
+              <TouchableOpacity
+                key={paciente.id}
+                style={styles.filaCumpleanos}
+                onPress={() => router.push({ pathname: '/paciente/[pacienteId]', params: { pacienteId: paciente.id } })}
+              >
+                <View style={styles.iconoCumpleanos}>
+                  <Ionicons name="gift-outline" size={19} color={paleta.primaria} />
+                </View>
+                <View style={styles.infoCumpleanos}>
+                  <Text style={styles.nombrePacienteCumpleanos}>{paciente.nombre}</Text>
+                  <Text style={styles.detalleCumpleanos}>{fechaCorta(paciente.fechaNacimiento)} · cumple {edad ?? ''} años</Text>
+                </View>
+                <Text style={styles.diasCumpleanos}>{dias === 0 ? 'Hoy' : dias === 1 ? 'Mañana' : `En ${dias} días`}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        ) : (
+          <View style={styles.tarjetaVacia}>
+            <Ionicons name="gift-outline" size={25} color="#9ca3af" />
+            <Text style={styles.textoVacio}>No hay cumpleaños durante los próximos 30 días.</Text>
+          </View>
+        )}
       </ScrollView>
 
       {/* Botón Flotante FAB en Magenta */}
-      <TouchableOpacity style={styles.botonFlotante} onPress={abrirNuevaCita}>
+      <TouchableOpacity style={[styles.botonFlotante, { backgroundColor: paleta.primaria }]} onPress={abrirNuevaCita} accessibilityLabel="Agendar una cita">
         <Ionicons name="add" size={32} color="#ffffff" />
       </TouchableOpacity>
 
-      {/* Modal interactivo de creación de paciente */}
-      <FormularioPaciente
-        visible={modalNuevoPaciente}
-        onCerrar={() => setModalNuevoPaciente(false)}
-        onGuardar={datos => {
-          agregarPaciente(datos);
-          setModalNuevoPaciente(false);
-        }}
+      <AgendarCitaModal
+        visible={modalNuevaCita}
+        fechaInicial={hoyStr}
+        onCerrar={() => setModalNuevaCita(false)}
       />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const crearStyles = (paleta: ReturnType<typeof obtenerPaleta>) => StyleSheet.create({
   contenedor: {
     flex: 1,
     backgroundColor: '#FAFAFA',
@@ -243,24 +228,24 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#FDF2F8',
+    backgroundColor: paleta.suave,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1.5,
-    borderColor: '#FCE7F3',
+    borderColor: paleta.borde,
   },
   avatarTexto: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#B80065',
+    color: paleta.primaria,
   },
   tarjetaResumenHoy: {
-    backgroundColor: '#FDF2F8',
+    backgroundColor: paleta.suave,
     borderRadius: 20,
     padding: 18,
     marginBottom: 24,
     borderWidth: 1,
-    borderColor: '#FCE7F3',
+    borderColor: paleta.borde,
   },
   tituloResumen: {
     fontSize: 18,
@@ -275,14 +260,14 @@ const styles = StyleSheet.create({
   },
   barraProgresoFondo: {
     height: 6,
-    backgroundColor: '#FCE7F3',
+    backgroundColor: paleta.borde,
     borderRadius: 3,
     overflow: 'hidden',
     marginBottom: 8,
   },
   barraProgresoRelleno: {
     height: '100%',
-    backgroundColor: '#B80065',
+    backgroundColor: paleta.primaria,
     borderRadius: 3,
   },
   filaMetricasProgreso: {
@@ -321,7 +306,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#FDF2F8',
+    backgroundColor: paleta.suave,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -353,7 +338,7 @@ const styles = StyleSheet.create({
     color: '#374151',
   },
   badgeConfirmada: {
-    backgroundColor: '#FDF2F8',
+    backgroundColor: paleta.suave,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 10,
@@ -361,7 +346,7 @@ const styles = StyleSheet.create({
   textoBadgeConfirmada: {
     fontSize: 12,
     fontWeight: 'bold',
-    color: '#B80065',
+    color: paleta.primaria,
   },
   tarjetaVacia: {
     backgroundColor: '#ffffff',
@@ -372,6 +357,34 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#f3f4f6',
   },
+  tarjetaCumpleanos: {
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: '#f3f4f6',
+  },
+  filaCumpleanos: {
+    minHeight: 70,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f9fafb',
+  },
+  iconoCumpleanos: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: paleta.suave,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  infoCumpleanos: { flex: 1 },
+  nombrePacienteCumpleanos: { color: '#111827', fontSize: 14, fontWeight: '700' },
+  detalleCumpleanos: { color: '#6b7280', fontSize: 11, marginTop: 4 },
+  diasCumpleanos: { color: paleta.primaria, fontSize: 11, fontWeight: '700', marginLeft: 6 },
   textoVacio: {
     fontSize: 14,
     color: '#9ca3af',
@@ -402,7 +415,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#FDF2F8',
+    backgroundColor: paleta.suave,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 10,
@@ -417,14 +430,14 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 24,
     right: 20,
-    backgroundColor: '#B80065',
+    backgroundColor: paleta.primaria,
     width: 58,
     height: 58,
     borderRadius: 29,
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 6,
-    shadowColor: '#B80065',
+    shadowColor: paleta.primaria,
     shadowOpacity: 0.4,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },

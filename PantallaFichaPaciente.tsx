@@ -1,18 +1,22 @@
 import React, { useContext, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation, useRoute, NavigationProp, RouteProp } from '@react-navigation/native';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CitasContext, Cita } from './CitasContext';
+import { CitasContext, Cita, formatearFecha } from './CitasContext';
 import { PacientesContext, DatosPaciente, calcularEdad, diasParaCumple } from './PacientesContext';
 import FormularioPaciente from './Formulariopaciente';
-import { PacientesStackParamList, RootTabParamList } from './tiposNavegacion';
+import AgendarCitaModal from './AgendarCitaModal';
 import { normalizarNombre, iniciales, fechaCorta, marcaAhora, marcaTiempo, etiquetaRelativa } from './utilidades';
+import { useAuth } from './AuthContext';
+import { obtenerPaleta } from './tema';
 
 export default function PantallaFichaPaciente() {
-  const navigation = useNavigation<NavigationProp<RootTabParamList & PacientesStackParamList>>();
-  const route = useRoute<RouteProp<PacientesStackParamList, 'FichaPaciente'>>();
+  const route = useLocalSearchParams<{ pacienteId: string }>();
   const insets = useSafeAreaInsets();
+  const { usuarioActual } = useAuth();
+  const paleta = obtenerPaleta(usuarioActual?.paleta);
+  const styles = useMemo(() => crearStyles(paleta), [paleta]);
 
   const citasContext = useContext(CitasContext);
   const pacientesContext = useContext(PacientesContext);
@@ -21,8 +25,9 @@ export default function PantallaFichaPaciente() {
   const { pacientes, editarPaciente, eliminarPaciente } = pacientesContext;
 
   const [modalVisible, setModalVisible] = useState(false);
+  const [modalCitaVisible, setModalCitaVisible] = useState(false);
 
-  const paciente = pacientes.find(p => p.id === route.params.pacienteId);
+  const paciente = pacientes.find(p => p.id === route.pacienteId);
 
   const { proximas, historial } = useMemo(() => {
     if (!paciente) return { proximas: [] as Cita[], historial: [] as Cita[] };
@@ -41,7 +46,7 @@ export default function PantallaFichaPaciente() {
     return (
       <View style={[styles.contenedor, styles.centrado, { paddingTop: insets.top }]}>
         <Text style={styles.vacio}>Este paciente ya no existe.</Text>
-        <TouchableOpacity style={styles.botonPrimario} onPress={() => navigation.goBack()}>
+        <TouchableOpacity style={styles.botonPrimario} onPress={() => router.back()}>
           <Text style={styles.textoPrimario}>Volver</Text>
         </TouchableOpacity>
       </View>
@@ -76,7 +81,7 @@ export default function PantallaFichaPaciente() {
           style: 'destructive',
           onPress: () => {
             eliminarPaciente(paciente.id);
-            navigation.goBack();
+            router.back();
           },
         },
       ]
@@ -84,14 +89,11 @@ export default function PantallaFichaPaciente() {
   };
 
   const abrirCita = (cita: Cita) => {
-    navigation.navigate('Calendario', { screen: 'NotasSesion', params: { cita, modo: 'ver' } });
+    router.push({ pathname: '/notas/[citaId]', params: { citaId: cita.id, modo: 'ver' } });
   };
 
   const agendarCita = () => {
-    navigation.navigate('Calendario', {
-      screen: 'VistaCalendario',
-      params: { nuevaCita: true, paciente: paciente.nombre },
-    });
+    setModalCitaVisible(true);
   };
 
   const renderCita = (cita: Cita) => (
@@ -112,7 +114,7 @@ export default function PantallaFichaPaciente() {
     <View style={[styles.contenedor, { paddingTop: insets.top + 10 }]}>
       {/* Cabecera con volver y editar */}
       <View style={styles.encabezado}>
-        <TouchableOpacity style={styles.botonIcono} onPress={() => navigation.goBack()}>
+        <TouchableOpacity style={styles.botonIcono} onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={24} color="#111827" />
         </TouchableOpacity>
         <Text style={styles.titulo}>Perfil del paciente</Text>
@@ -132,7 +134,7 @@ export default function PantallaFichaPaciente() {
 
           {diasCumple !== null ? (
             <View style={styles.insigniaCumple}>
-              <Ionicons name="gift-outline" size={14} color="#B80065" />
+              <Ionicons name="gift-outline" size={14} color={paleta.primaria} />
               <Text style={styles.textoCumple}>
                 {diasCumple === 0 ? 'Cumpleaños hoy' : `Cumpleaños en ${diasCumple} ${diasCumple === 1 ? 'día' : 'días'}`}
               </Text>
@@ -143,7 +145,7 @@ export default function PantallaFichaPaciente() {
         {/* Tarjeta de datos de contacto */}
         <View style={styles.tarjeta}>
           <View style={styles.datoFila}>
-            <Ionicons name="calendar-outline" size={20} color="#B80065" />
+            <Ionicons name="calendar-outline" size={20} color={paleta.primaria} />
             <View style={styles.infoDato}>
               <Text style={styles.etiquetaDato}>Fecha de nacimiento</Text>
               <Text style={paciente.fechaNacimiento ? styles.datoTexto : styles.datoVacio}>
@@ -157,7 +159,7 @@ export default function PantallaFichaPaciente() {
             disabled={!paciente.telefono}
             onPress={() => Linking.openURL(`tel:${paciente.telefono.replace(/\s/g, '')}`)}
           >
-            <Ionicons name="call-outline" size={20} color="#B80065" />
+            <Ionicons name="call-outline" size={20} color={paleta.primaria} />
             <View style={styles.infoDato}>
               <Text style={styles.etiquetaDato}>Teléfono</Text>
               <Text style={paciente.telefono ? styles.datoEnlace : styles.datoVacio}>
@@ -171,7 +173,7 @@ export default function PantallaFichaPaciente() {
             disabled={!paciente.correo}
             onPress={() => Linking.openURL(`mailto:${paciente.correo}`)}
           >
-            <Ionicons name="mail-outline" size={20} color="#B80065" />
+            <Ionicons name="mail-outline" size={20} color={paleta.primaria} />
             <View style={styles.infoDato}>
               <Text style={styles.etiquetaDato}>Correo electrónico</Text>
               <Text style={paciente.correo ? styles.datoEnlace : styles.datoVacio}>
@@ -218,11 +220,17 @@ export default function PantallaFichaPaciente() {
         onCerrar={() => setModalVisible(false)}
         onGuardar={guardarCambios}
       />
+      <AgendarCitaModal
+        visible={modalCitaVisible}
+        fechaInicial={formatearFecha(new Date())}
+        pacienteInicial={paciente.nombre}
+        onCerrar={() => setModalCitaVisible(false)}
+      />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const crearStyles = (paleta: ReturnType<typeof obtenerPaleta>) => StyleSheet.create({
   contenedor: { flex: 1, backgroundColor: '#FAFAFA' },
   centrado: { justifyContent: 'center', alignItems: 'center' },
   encabezado: {
@@ -261,29 +269,29 @@ const styles = StyleSheet.create({
     width: 76,
     height: 76,
     borderRadius: 38,
-    backgroundColor: '#FDF2F8',
+    backgroundColor: paleta.suave,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
     borderWidth: 1.5,
-    borderColor: '#FCE7F3',
+    borderColor: paleta.borde,
   },
-  textoAvatar: { fontSize: 26, fontWeight: 'bold', color: '#B80065' },
+  textoAvatar: { fontSize: 26, fontWeight: 'bold', color: paleta.primaria },
   nombre: { fontSize: 22, fontWeight: 'bold', color: '#111827' },
   edad: { fontSize: 13, color: '#6b7280', marginTop: 2 },
   insigniaCumple: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#FDF2F8',
+    backgroundColor: paleta.suave,
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 14,
     marginTop: 12,
     borderWidth: 1,
-    borderColor: '#FCE7F3',
+    borderColor: paleta.borde,
   },
-  textoCumple: { fontSize: 12, fontWeight: 'bold', color: '#B80065' },
+  textoCumple: { fontSize: 12, fontWeight: 'bold', color: paleta.primaria },
   tarjeta: {
     backgroundColor: '#ffffff',
     borderRadius: 18,
@@ -316,14 +324,14 @@ const styles = StyleSheet.create({
   datoEnlace: { fontSize: 14, color: '#111827', fontWeight: '500', marginTop: 2 },
   datoVacio: { fontSize: 13, color: '#9ca3af', fontStyle: 'italic', marginTop: 2 },
   botonAgendarPrincipal: {
-    backgroundColor: '#B80065',
+    backgroundColor: paleta.primaria,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     height: 52,
     borderRadius: 16,
     marginBottom: 20,
-    shadowColor: '#B80065',
+    shadowColor: paleta.primaria,
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
@@ -345,13 +353,13 @@ const styles = StyleSheet.create({
     borderBottomColor: '#f9fafb',
   },
   columnaFecha: { width: 70 },
-  horaCita: { fontSize: 14, fontWeight: 'bold', color: '#B80065' },
+  horaCita: { fontSize: 14, fontWeight: 'bold', color: paleta.primaria },
   diaCita: { fontSize: 11, color: '#6b7280', marginTop: 2 },
   infoCita: { flex: 1 },
   tipoCita: { fontSize: 13, fontWeight: '600', color: '#111827' },
   notasCita: { fontSize: 11, color: '#9ca3af', marginTop: 2 },
   vacio: { textAlign: 'center', color: '#9ca3af', fontSize: 13, paddingVertical: 12 },
-  botonPrimario: { backgroundColor: '#B80065', paddingVertical: 12, paddingHorizontal: 24, borderRadius: 14, marginTop: 16 },
+  botonPrimario: { backgroundColor: paleta.primaria, paddingVertical: 12, paddingHorizontal: 24, borderRadius: 14, marginTop: 16 },
   textoPrimario: { color: '#ffffff', fontWeight: 'bold', fontSize: 15 },
   botonEliminar: {
     padding: 14,

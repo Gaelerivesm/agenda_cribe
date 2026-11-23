@@ -13,7 +13,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import LogoCribe from './LogoCribe';
-import { useAuth } from './AuthContext';
+import { useAuth, validarPassword } from './AuthContext';
 
 type ModoPantalla = 'login' | 'registro' | 'recuperar_solicitar' | 'recuperar_verificar';
 
@@ -32,6 +32,7 @@ export default function PantallaLogin() {
   const [nombreRegistro, setNombreRegistro] = useState('');
   const [usuarioRegistro, setUsuarioRegistro] = useState('');
   const [correoRegistro, setCorreoRegistro] = useState('');
+  const [telefonoRegistro, setTelefonoRegistro] = useState('');
   const [especialidadRegistro, setEspecialidadRegistro] = useState('');
   const [passwordRegistro, setPasswordRegistro] = useState('');
   const [confirmarPassRegistro, setConfirmarPassRegistro] = useState('');
@@ -45,24 +46,25 @@ export default function PantallaLogin() {
   const [correoDestinoSimulado, setCorreoDestinoSimulado] = useState('');
 
   // Manejar Login
-  const manejarEntrar = () => {
+  const manejarEntrar = async () => {
     if (!identificadorLogin.trim() || !passwordLogin) {
       Alert.alert('Faltan datos', 'Por favor ingresa tu correo o usuario y tu contraseña.');
       return;
     }
 
-    const resultado = iniciarSesion(identificadorLogin, passwordLogin);
+    const resultado = await iniciarSesion(identificadorLogin, passwordLogin);
     if (!resultado.exito) {
       Alert.alert('Error de acceso', resultado.error || 'Credenciales inválidas');
     }
   };
 
   // Manejar Registro
-  const manejarCrearCuenta = () => {
+  const manejarCrearCuenta = async () => {
     if (
       !nombreRegistro.trim() ||
       !usuarioRegistro.trim() ||
       !correoRegistro.trim() ||
+      !telefonoRegistro.trim() ||
       !passwordRegistro.trim()
     ) {
       Alert.alert('Faltan campos', 'Por favor completa los campos obligatorios del registro.');
@@ -74,8 +76,13 @@ export default function PantallaLogin() {
       return;
     }
 
-    if (passwordRegistro.length < 4) {
-      Alert.alert('Contraseña corta', 'La contraseña debe tener al menos 4 caracteres.');
+    if (!/^\d{10}$/.test(telefonoRegistro.replace(/\D/g, ''))) {
+      Alert.alert('Teléfono inválido', 'Ingresa un número de teléfono de exactamente 10 dígitos.');
+      return;
+    }
+
+    if (!validarPassword(passwordRegistro)) {
+      Alert.alert('Contraseña débil', 'Usa al menos 8 caracteres, un número, una mayúscula y un símbolo.');
       return;
     }
 
@@ -84,10 +91,11 @@ export default function PantallaLogin() {
       return;
     }
 
-    const res = registrarse(
+    const res = await registrarse(
       nombreRegistro,
       usuarioRegistro,
       correoRegistro,
+      telefonoRegistro,
       passwordRegistro,
       especialidadRegistro || 'Terapeuta / Psicólogo'
     );
@@ -99,13 +107,13 @@ export default function PantallaLogin() {
   };
 
   // Manejar Solicitud de Código (Paso 1 recuperación)
-  const manejarSolicitarCodigo = () => {
+  const manejarSolicitarCodigo = async () => {
     if (!identificadorRecuperar.trim()) {
       Alert.alert('Dato requerido', 'Escribe el correo o usuario de la cuenta que deseas recuperar.');
       return;
     }
 
-    const res = generarCodigoRecuperacion(identificadorRecuperar);
+    const res = await generarCodigoRecuperacion(identificadorRecuperar);
     if (!res.exito) {
       Alert.alert('Error', res.error || 'No se encontró la cuenta');
       return;
@@ -117,7 +125,7 @@ export default function PantallaLogin() {
   };
 
   // Manejar Restablecer Clave (Paso 2 recuperación)
-  const manejarRestablecerClave = () => {
+  const manejarRestablecerClave = async () => {
     if (!codigoIngresado.trim()) {
       Alert.alert('Código faltante', 'Por favor escribe el código de 6 dígitos.');
       return;
@@ -128,8 +136,8 @@ export default function PantallaLogin() {
       return;
     }
 
-    if (nuevaPassword.length < 4) {
-      Alert.alert('Contraseña débil', 'La nueva contraseña debe tener al menos 4 caracteres.');
+    if (!validarPassword(nuevaPassword)) {
+      Alert.alert('Contraseña débil', 'Usa al menos 8 caracteres, un número, una mayúscula y un símbolo.');
       return;
     }
 
@@ -138,7 +146,7 @@ export default function PantallaLogin() {
       return;
     }
 
-    const res = restablecerPassword(identificadorRecuperar, codigoIngresado, codigoGenerado, nuevaPassword);
+    const res = await restablecerPassword(identificadorRecuperar, codigoIngresado, codigoGenerado, nuevaPassword);
     if (!res.exito) {
       Alert.alert('Error', res.error || 'No se pudo restablecer la contraseña');
       return;
@@ -171,10 +179,7 @@ export default function PantallaLogin() {
         </View>
       </View>
 
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView
           contentContainerStyle={styles.scroll}
           showsVerticalScrollIndicator={false}
@@ -187,11 +192,11 @@ export default function PantallaLogin() {
                 <Text style={styles.titulo}>Iniciar sesión</Text>
                 <Text style={styles.subtitulo}>Bienvenido de nuevo</Text>
 
-                <Text style={styles.label}>Correo electrónico</Text>
+                <Text style={styles.label}>Teléfono, correo o usuario</Text>
                 <View style={styles.inputContainer}>
                   <TextInput
                     style={styles.input}
-                    placeholder="Correo electrónico o usuario"
+                    placeholder="Teléfono, correo o usuario"
                     placeholderTextColor="#9ca3af"
                     value={identificadorLogin}
                     onChangeText={setIdentificadorLogin}
@@ -238,13 +243,6 @@ export default function PantallaLogin() {
                   </TouchableOpacity>
                 </View>
 
-                {/* Tarjeta de ayuda rápida con credenciales demo */}
-                <View style={styles.cajaDemo}>
-                  <Text style={styles.tituloDemo}>Acceso de prueba:</Text>
-                  <Text style={styles.textoDemo}>
-                    Usuario: <Text style={styles.negrita}>ale.ruiz</Text> · Clave: <Text style={styles.negrita}>1234</Text>
-                  </Text>
-                </View>
               </>
             )}
 
@@ -269,7 +267,7 @@ export default function PantallaLogin() {
                 <View style={styles.inputContainer}>
                   <TextInput
                     style={styles.input}
-                    placeholder="ale.ruiz"
+                    placeholder="usuario.salud"
                     placeholderTextColor="#9ca3af"
                     value={usuarioRegistro}
                     onChangeText={setUsuarioRegistro}
@@ -293,7 +291,7 @@ export default function PantallaLogin() {
                 <View style={styles.inputContainer}>
                   <TextInput
                     style={styles.input}
-                    placeholder="alejandro.ruiz@correo.com"
+                    placeholder="nombre@correo.com"
                     placeholderTextColor="#9ca3af"
                     value={correoRegistro}
                     onChangeText={setCorreoRegistro}
@@ -302,17 +300,31 @@ export default function PantallaLogin() {
                   />
                 </View>
 
+                <Text style={styles.label}>Número de teléfono (10 dígitos)</Text>
+                <View style={styles.inputContainer}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="6145550101"
+                    placeholderTextColor="#9ca3af"
+                    value={telefonoRegistro}
+                    onChangeText={valor => setTelefonoRegistro(valor.replace(/\D/g, '').slice(0, 10))}
+                    keyboardType="number-pad"
+                    maxLength={10}
+                  />
+                </View>
+
                 <Text style={styles.label}>Contraseña</Text>
                 <View style={styles.inputContainer}>
                   <TextInput
                     style={styles.input}
-                    placeholder="Mínimo 4 caracteres"
+                    placeholder="8+ caracteres, número, mayúscula y símbolo"
                     placeholderTextColor="#9ca3af"
                     secureTextEntry
                     value={passwordRegistro}
                     onChangeText={setPasswordRegistro}
                   />
                 </View>
+                <Text style={styles.textoRequisito}>Debe incluir al menos 8 caracteres, un número, una mayúscula y un símbolo.</Text>
 
                 <Text style={styles.label}>Confirmar contraseña</Text>
                 <View style={styles.inputContainer}>
@@ -346,7 +358,7 @@ export default function PantallaLogin() {
                 <View style={styles.inputContainer}>
                   <TextInput
                     style={styles.input}
-                    placeholder="alejandro.ruiz@correo.com"
+                    placeholder="nombre@correo.com"
                     placeholderTextColor="#9ca3af"
                     value={identificadorRecuperar}
                     onChangeText={setIdentificadorRecuperar}
@@ -397,7 +409,7 @@ export default function PantallaLogin() {
                 <View style={styles.inputContainer}>
                   <TextInput
                     style={styles.input}
-                    placeholder="Mínimo 4 caracteres"
+                    placeholder="8+ caracteres, número, mayúscula y símbolo"
                     placeholderTextColor="#9ca3af"
                     secureTextEntry
                     value={nuevaPassword}
@@ -577,6 +589,13 @@ const styles = StyleSheet.create({
   },
   textoVolver: {
     fontSize: 14,
+    color: '#6b7280',
+  },
+  textoRequisito: {
+    marginTop: -8,
+    marginBottom: 12,
+    fontSize: 11,
+    lineHeight: 16,
     color: '#6b7280',
   },
   cajaDemo: {

@@ -1,9 +1,13 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, Modal, TextInput, ScrollView } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Modal, TextInput, ScrollView, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from './AuthContext';
 import { iniciales } from './utilidades';
+import ModalCambioPassword from './ModalCambioPassword';
+import ModalPaletas from './ModalPaletas';
+import { obtenerPaleta } from './tema';
+import { router } from 'expo-router';
 
 interface PantallaPerfilProps {
   onCerrarSesion?: () => void;
@@ -14,6 +18,8 @@ export default function PantallaPerfil({ onCerrarSesion }: PantallaPerfilProps) 
   const { usuarioActual, cerrarSesion, actualizarPerfil } = useAuth();
 
   const [modalEditarVisible, setModalEditarVisible] = useState(false);
+  const [modalPasswordVisible, setModalPasswordVisible] = useState(false);
+  const [modalPaletasVisible, setModalPaletasVisible] = useState(false);
   const [nuevoNombre, setNuevoNombre] = useState(usuarioActual?.nombre || '');
   const [nuevaEspecialidad, setNuevaEspecialidad] = useState(usuarioActual?.especialidad || '');
 
@@ -31,6 +37,7 @@ export default function PantallaPerfil({ onCerrarSesion }: PantallaPerfilProps) 
               onCerrarSesion();
             } else {
               cerrarSesion();
+              router.replace('/login');
             }
           },
         },
@@ -49,6 +56,8 @@ export default function PantallaPerfil({ onCerrarSesion }: PantallaPerfilProps) 
   };
 
   const inicialesDoc = usuarioActual?.nombre ? iniciales(usuarioActual.nombre) : 'DR';
+  const paleta = obtenerPaleta(usuarioActual?.paleta);
+  const styles = useMemo(() => crearStyles(paleta), [paleta]);
 
   return (
     <View style={[styles.contenedor, { paddingTop: insets.top + 10 }]}>
@@ -57,12 +66,12 @@ export default function PantallaPerfil({ onCerrarSesion }: PantallaPerfilProps) 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {/* Tarjeta de perfil con avatar grande */}
         <View style={styles.tarjetaPerfil}>
-          <View style={styles.avatarGrande}>
-            <Text style={styles.textoAvatarGrande}>{inicialesDoc}</Text>
+          <View style={[styles.avatarGrande, { backgroundColor: paleta.suave, borderColor: paleta.borde }]}>
+            <Text style={[styles.textoAvatarGrande, { color: paleta.primaria }]}>{inicialesDoc}</Text>
           </View>
-          <Text style={styles.nombreDoctor}>{usuarioActual?.nombre || 'Dr. Alejandro Ruiz'}</Text>
-          <Text style={styles.especialidadDoctor}>{usuarioActual?.especialidad || 'Terapeuta / Psicólogo'}</Text>
-          <Text style={styles.correoDoctor}>{usuarioActual?.correo || 'alejandro.ruiz@correo.com'}</Text>
+          <Text style={styles.nombreDoctor}>{usuarioActual?.nombre || 'Profesional de la salud'}</Text>
+          <Text style={styles.especialidadDoctor}>{usuarioActual?.especialidad || 'Especialidad no registrada'}</Text>
+          {usuarioActual?.correo ? <Text style={styles.correoDoctor}>{usuarioActual.correo}</Text> : null}
         </View>
 
         {/* Menú de opciones */}
@@ -82,6 +91,14 @@ export default function PantallaPerfil({ onCerrarSesion }: PantallaPerfilProps) 
             <Ionicons name="chevron-forward" size={18} color="#9ca3af" />
           </TouchableOpacity>
 
+          <TouchableOpacity style={styles.opcionItem} onPress={() => setModalPaletasVisible(true)}>
+            <View style={styles.filaOpcion}>
+              <Ionicons name="color-palette-outline" size={20} color={paleta.primaria} style={styles.iconoOpcion} />
+              <Text style={styles.textoOpcion}>Color de interfaz</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color="#9ca3af" />
+          </TouchableOpacity>
+
           <TouchableOpacity
             style={styles.opcionItem}
             onPress={() =>
@@ -97,9 +114,7 @@ export default function PantallaPerfil({ onCerrarSesion }: PantallaPerfilProps) 
 
           <TouchableOpacity
             style={styles.opcionItem}
-            onPress={() =>
-              Alert.alert('Seguridad', 'Tu contraseña y acceso están protegidos en este dispositivo.')
-            }
+            onPress={() => setModalPasswordVisible(true)}
           >
             <View style={styles.filaOpcion}>
               <Ionicons name="lock-closed-outline" size={20} color="#4b5563" style={styles.iconoOpcion} />
@@ -124,16 +139,23 @@ export default function PantallaPerfil({ onCerrarSesion }: PantallaPerfilProps) 
 
         {/* Botón de Cerrar Sesión en Rosa Suave / Magenta */}
         <TouchableOpacity style={styles.botonCerrarSesion} onPress={manejarCierreSesion}>
-          <Ionicons name="log-out-outline" size={20} color="#B80065" style={styles.iconoLogout} />
+          <Ionicons name="log-out-outline" size={20} color={paleta.primaria} style={styles.iconoLogout} />
           <Text style={styles.textoCerrarSesion}>Cerrar sesión</Text>
         </TouchableOpacity>
       </ScrollView>
 
       {/* Modal para editar información personal */}
-      <Modal visible={modalEditarVisible} transparent animationType="fade">
-        <View style={styles.modalFondo}>
-          <View style={styles.modalTarjeta}>
-            <Text style={styles.modalTitulo}>Editar información</Text>
+      <Modal visible={modalEditarVisible} transparent animationType="fade" onRequestClose={() => setModalEditarVisible(false)}>
+        <Pressable style={styles.modalFondo} onPress={() => setModalEditarVisible(false)}>
+          <Pressable style={styles.modalTarjeta} onPress={evento => evento.stopPropagation()}>
+            <ScrollView keyboardShouldPersistTaps="handled">
+              <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+            <View style={styles.modalEncabezado}>
+              <Text style={styles.modalTitulo}>Editar información</Text>
+              <TouchableOpacity onPress={() => setModalEditarVisible(false)} accessibilityLabel="Cerrar ventana">
+                <Ionicons name="close" size={22} color="#6b7280" />
+              </TouchableOpacity>
+            </View>
             <Text style={styles.modalSubtitulo}>Actualiza tus datos profesionales:</Text>
 
             <Text style={styles.labelModal}>Nombre completo:</Text>
@@ -163,14 +185,18 @@ export default function PantallaPerfil({ onCerrarSesion }: PantallaPerfilProps) 
                 <Text style={styles.textoModalGuardar}>Guardar</Text>
               </TouchableOpacity>
             </View>
-          </View>
-        </View>
+              </KeyboardAvoidingView>
+            </ScrollView>
+          </Pressable>
+        </Pressable>
       </Modal>
+      <ModalCambioPassword visible={modalPasswordVisible} onCerrar={() => setModalPasswordVisible(false)} />
+      <ModalPaletas visible={modalPaletasVisible} onCerrar={() => setModalPaletasVisible(false)} />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const crearStyles = (paleta: ReturnType<typeof obtenerPaleta>) => StyleSheet.create({
   contenedor: { flex: 1, backgroundColor: '#FAFAFA', paddingHorizontal: 20 },
   titulo: { fontSize: 24, fontWeight: 'bold', color: '#111827', textAlign: 'center', marginBottom: 20 },
   scroll: { paddingBottom: 40 },
@@ -191,17 +217,17 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#FDF2F8',
+    backgroundColor: paleta.suave,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 14,
     borderWidth: 2,
-    borderColor: '#FCE7F3',
+    borderColor: paleta.borde,
   },
   textoAvatarGrande: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#B80065',
+    color: paleta.primaria,
   },
   nombreDoctor: { fontSize: 20, fontWeight: 'bold', color: '#111827' },
   especialidadDoctor: { fontSize: 13, color: '#6b7280', marginTop: 4 },
@@ -238,17 +264,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FDF2F8',
+    backgroundColor: paleta.suave,
     height: 52,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#FCE7F3',
+    borderColor: paleta.borde,
   },
   iconoLogout: {
     marginRight: 8,
   },
   textoCerrarSesion: {
-    color: '#B80065',
+    color: paleta.primaria,
     fontWeight: 'bold',
     fontSize: 15,
   },
@@ -277,6 +303,7 @@ const styles = StyleSheet.create({
     color: '#111827',
     marginBottom: 4,
   },
+  modalEncabezado: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   modalSubtitulo: {
     fontSize: 13,
     color: '#6b7280',
@@ -315,7 +342,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   botonModalGuardar: {
-    backgroundColor: '#B80065',
+    backgroundColor: paleta.primaria,
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 10,

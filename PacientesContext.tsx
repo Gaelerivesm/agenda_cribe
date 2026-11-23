@@ -1,6 +1,7 @@
 import React, { createContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { formatearFecha } from './CitasContext';
+import { useAuth } from './AuthContext';
 
 export interface Paciente {
   id: string;
@@ -21,7 +22,9 @@ interface PacientesContextType {
   eliminarPaciente: (id: string) => void;
 }
 
-const CLAVE_ALMACENAMIENTO = 'agenda_cribe_pacientes_v1';
+const CLAVE_ALMACENAMIENTO = 'agenda_cribe_pacientes_v2';
+const CLAVE_ANTIGUA = 'agenda_cribe_pacientes_v1';
+const CLAVE_DUENO_ANTIGUO = 'agenda_cribe_pacientes_dueno_v1';
 
 const parsearNacimiento = (fecha: string) => {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(fecha);
@@ -55,48 +58,64 @@ export const edadQueCumple = (fechaNacimiento: string, ref: Date = new Date()): 
   return anioCumple - n.anio;
 };
 
-const crearPacientesIniciales = (): Paciente[] => {
-  const hoy = new Date();
-  const nacimiento = (anio: number, dias: number) =>
-    formatearFecha(new Date(anio, hoy.getMonth(), hoy.getDate() + dias));
-  return [
-    { id: 'p1', nombre: 'Ana Torres', fechaNacimiento: nacimiento(1994, 90), telefono: '614 555 0101', correo: 'ana.torres@correo.com' },
-    { id: 'p2', nombre: 'Luis García', fechaNacimiento: nacimiento(1988, 150), telefono: '614 555 0102', correo: '' },
-    { id: 'p3', nombre: 'Sofía Ramírez', fechaNacimiento: nacimiento(1999, 200), telefono: '614 555 0103', correo: 'sofia.r@correo.com' },
-    { id: 'p4', nombre: 'Carlos Ruiz', fechaNacimiento: nacimiento(1993, 3), telefono: '614 555 0104', correo: '' },
-    { id: 'p5', nombre: 'Elena Vargas', fechaNacimiento: nacimiento(1998, 6), telefono: '614 555 0105', correo: 'elena.v@correo.com' },
-    { id: 'p6', nombre: 'Roberto Gómez', fechaNacimiento: nacimiento(1980, 12), telefono: '614 555 0106', correo: '' },
-  ];
-};
-
 export const PacientesContext = createContext<PacientesContextType | undefined>(undefined);
 
 export const PacientesProvider = ({ children }: { children: ReactNode }) => {
+  const { usuarioActual, cargandoAuth } = useAuth();
+  const usuarioId = usuarioActual?.id ?? null;
   const [pacientes, setPacientes] = useState<Paciente[]>([]);
   const [cargando, setCargando] = useState(true);
+  const [usuarioDatosId, setUsuarioDatosId] = useState<string | null>(null);
 
   const recargar = useCallback(async () => {
+    if (!usuarioId || cargandoAuth) return;
+    setCargando(true);
+    setUsuarioDatosId(null);
+    setPacientes([]);
+    const claveUsuario = `${CLAVE_ALMACENAMIENTO}:${usuarioId}`;
     try {
-      const guardado = await AsyncStorage.getItem(CLAVE_ALMACENAMIENTO);
-      setPacientes(guardado ? JSON.parse(guardado) : crearPacientesIniciales());
+      const guardado = await AsyncStorage.getItem(claveUsuario);
+      if (guardado) {
+        setPacientes(JSON.parse(guardado));
+      } else {
+        const [duenoAntiguo, antiguo] = await Promise.all([
+          AsyncStorage.getItem(CLAVE_DUENO_ANTIGUO),
+          AsyncStorage.getItem(CLAVE_ANTIGUA),
+        ]);
+        if (!duenoAntiguo && antiguo) {
+          await AsyncStorage.setItem(claveUsuario, antiguo);
+          await AsyncStorage.setItem(CLAVE_DUENO_ANTIGUO, usuarioId);
+          setPacientes(JSON.parse(antiguo));
+        } else {
+          setPacientes([]);
+        }
+      }
+      setUsuarioDatosId(usuarioId);
     } catch (error) {
       console.log('Error al cargar pacientes', error);
-      setPacientes(crearPacientesIniciales());
+      setPacientes([]);
     } finally {
       setCargando(false);
     }
-  }, []);
+  }, [usuarioId, cargandoAuth]);
 
   useEffect(() => {
-    recargar();
-  }, [recargar]);
+    if (cargandoAuth) return;
+    if (!usuarioId) {
+      setPacientes([]);
+      setUsuarioDatosId(null);
+      setCargando(false);
+      return;
+    }
+    void recargar();
+  }, [recargar, cargandoAuth, usuarioId]);
 
   useEffect(() => {
-    if (cargando) return;
-    AsyncStorage.setItem(CLAVE_ALMACENAMIENTO, JSON.stringify(pacientes)).catch(error =>
+    if (cargando || !usuarioId || usuarioDatosId !== usuarioId) return;
+    AsyncStorage.setItem(`${CLAVE_ALMACENAMIENTO}:${usuarioId}`, JSON.stringify(pacientes)).catch(error =>
       console.log('Error al guardar pacientes', error)
     );
-  }, [pacientes, cargando]);
+  }, [pacientes, cargando, usuarioId, usuarioDatosId]);
 
   const agregarPaciente = useCallback((datos: DatosPaciente) => {
     const nuevo: Paciente = { ...datos, id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}` };

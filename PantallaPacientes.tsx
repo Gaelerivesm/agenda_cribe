@@ -1,17 +1,20 @@
 import React, { useContext, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, FlatList } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, FlatList, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation, NavigationProp } from '@react-navigation/native';
+import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CitasContext, Cita } from './CitasContext';
 import { PacientesContext, Paciente } from './PacientesContext';
 import FormularioPaciente from './Formulariopaciente';
-import { PacientesStackParamList } from './tiposNavegacion';
 import { normalizarNombre, iniciales, marcaAhora, marcaTiempo, etiquetaRelativa } from './utilidades';
+import { useAuth } from './AuthContext';
+import { obtenerPaleta } from './tema';
 
 export default function PantallaPacientes() {
-  const navigation = useNavigation<NavigationProp<PacientesStackParamList>>();
   const insets = useSafeAreaInsets();
+  const { usuarioActual } = useAuth();
+  const paleta = obtenerPaleta(usuarioActual?.paleta);
+  const styles = useMemo(() => crearStyles(paleta), [paleta]);
 
   const citasContext = useContext(CitasContext);
   const pacientesContext = useContext(PacientesContext);
@@ -47,7 +50,7 @@ export default function PantallaPacientes() {
     return (
       <TouchableOpacity
         style={styles.tarjeta}
-        onPress={() => navigation.navigate('FichaPaciente', { pacienteId: item.id })}
+        onPress={() => router.push({ pathname: '/paciente/[pacienteId]', params: { pacienteId: item.id } })}
       >
         <View style={styles.avatar}>
           <Text style={styles.textoAvatar}>{iniciales(item.nombre)}</Text>
@@ -70,6 +73,7 @@ export default function PantallaPacientes() {
         <Text style={styles.contador}>{pacientes.length} en total</Text>
       </View>
 
+      <KeyboardAvoidingView style={styles.areaLista} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <View style={styles.buscador}>
         <Ionicons name="search" size={18} color="#9ca3af" />
         <TextInput
@@ -100,6 +104,7 @@ export default function PantallaPacientes() {
           </Text>
         }
       />
+      </KeyboardAvoidingView>
 
       <TouchableOpacity style={styles.botonFlotante} onPress={() => setModalVisible(true)}>
         <Ionicons name="add" size={32} color="#ffffff" />
@@ -117,8 +122,9 @@ export default function PantallaPacientes() {
   );
 }
 
-const styles = StyleSheet.create({
+const crearStyles = (paleta: ReturnType<typeof obtenerPaleta>) => StyleSheet.create({
   contenedor: { flex: 1, backgroundColor: '#FAFAFA' },
+  areaLista: { flex: 1 },
   encabezado: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -161,31 +167,31 @@ const styles = StyleSheet.create({
     width: 46,
     height: 46,
     borderRadius: 23,
-    backgroundColor: '#FDF2F8',
+    backgroundColor: paleta.suave,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 14,
     borderWidth: 1,
-    borderColor: '#FCE7F3',
+    borderColor: paleta.borde,
   },
-  textoAvatar: { fontSize: 15, fontWeight: 'bold', color: '#B80065' },
+  textoAvatar: { fontSize: 15, fontWeight: 'bold', color: paleta.primaria },
   info: { flex: 1 },
   nombre: { fontSize: 16, fontWeight: 'bold', color: '#111827' },
-  proxima: { fontSize: 13, color: '#B80065', marginTop: 2, fontWeight: '500' },
+  proxima: { fontSize: 13, color: paleta.primaria, marginTop: 2, fontWeight: '500' },
   sinProxima: { fontSize: 13, color: '#9ca3af', marginTop: 2 },
   vacio: { textAlign: 'center', color: '#9ca3af', marginTop: 40, fontSize: 14 },
   botonFlotante: {
     position: 'absolute',
     bottom: 24,
     right: 20,
-    backgroundColor: '#B80065',
+    backgroundColor: paleta.primaria,
     width: 58,
     height: 58,
     borderRadius: 29,
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 6,
-    shadowColor: '#B80065',
+    shadowColor: paleta.primaria,
     shadowOpacity: 0.4,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },

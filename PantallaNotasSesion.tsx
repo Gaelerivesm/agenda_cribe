@@ -1,29 +1,50 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useEffect, useMemo, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView,
   KeyboardAvoidingView, Platform, Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CitasContext } from './CitasContext';
-import { CalendarioStackParamList } from './tiposNavegacion';
-import { fechaLarga, iniciales } from './utilidades';
+import { fechaLarga, iniciales, normalizarNombre } from './utilidades';
+import { useAuth } from './AuthContext';
+import { obtenerPaleta } from './tema';
+import { PacientesContext } from './PacientesContext';
 
 export default function PantallaNotasSesion() {
-  const navigation = useNavigation();
-  const route = useRoute<RouteProp<CalendarioStackParamList, 'NotasSesion'>>();
+  const route = useLocalSearchParams<{ citaId: string; modo?: 'ver' | 'editar' }>();
   const insets = useSafeAreaInsets();
+  const { usuarioActual } = useAuth();
+  const paleta = obtenerPaleta(usuarioActual?.paleta);
+  const styles = useMemo(() => crearStyles(paleta), [paleta]);
 
   const context = useContext(CitasContext);
+  const pacientesContext = useContext(PacientesContext);
   if (!context) throw new Error('CitasContext no está disponible');
+  if (!pacientesContext) throw new Error('PacientesContext no está disponible');
   const { citas, editarCita } = context;
+  const { pacientes } = pacientesContext;
 
-  const { cita: citaParam, modo } = route.params;
-  const cita = citas.find(c => c.id === citaParam.id) ?? citaParam;
+  const cita = citas.find(c => c.id === route.citaId);
+  const pacienteRelacionado = cita
+    ? pacientes.find(p => normalizarNombre(p.nombre) === normalizarNombre(cita.paciente))
+    : undefined;
+  const [editando, setEditando] = useState(route.modo === 'editar');
+  const [notas, setNotas] = useState('');
 
-  const [editando, setEditando] = useState(modo === 'editar');
-  const [notas, setNotas] = useState(cita.notas);
+  useEffect(() => {
+    if (cita) setNotas(cita.notas);
+  }, [cita?.id]);
+
+  if (!cita) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FAFAFA' }}>
+        <Text>Esta cita ya no existe.</Text>
+        <TouchableOpacity onPress={() => router.back()}><Text style={{ color: paleta.primaria, marginTop: 12 }}>Volver</Text></TouchableOpacity>
+      </View>
+    );
+  }
 
   const guardar = () => {
     const { id, ...resto } = cita;
@@ -40,13 +61,9 @@ export default function PantallaNotasSesion() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.flex}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <View style={[styles.contenedor, { paddingTop: insets.top + 10 }]}>
+    <View style={[styles.contenedor, { paddingTop: insets.top + 10 }]}>
         <View style={styles.encabezado}>
-          <TouchableOpacity style={styles.botonAtras} onPress={() => navigation.goBack()}>
+          <TouchableOpacity style={styles.botonAtras} onPress={() => router.back()}>
             <Ionicons name="chevron-back" size={24} color="#111827" />
           </TouchableOpacity>
           <Text style={styles.titulo}>Notas de sesión</Text>
@@ -54,12 +71,18 @@ export default function PantallaNotasSesion() {
         </View>
 
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={styles.tarjeta}>
             <View style={styles.avatar}>
               <Text style={styles.textoAvatar}>{iniciales(cita.paciente)}</Text>
             </View>
             <View style={styles.infoPaciente}>
-              <Text style={styles.nombre}>{cita.paciente}</Text>
+              <TouchableOpacity
+                disabled={!pacienteRelacionado}
+                onPress={() => pacienteRelacionado && router.push({ pathname: '/paciente/[pacienteId]', params: { pacienteId: pacienteRelacionado.id } })}
+              >
+                <Text style={styles.nombre}>{cita.paciente}</Text>
+              </TouchableOpacity>
               <Text style={styles.tipo}>{cita.tipo}</Text>
             </View>
             <View style={styles.insigniaConfirmada}>
@@ -71,11 +94,11 @@ export default function PantallaNotasSesion() {
 
           <View style={styles.tarjeta}>
             <View style={styles.datoFila}>
-              <Ionicons name="calendar-outline" size={20} color="#B80065" />
+              <Ionicons name="calendar-outline" size={20} color={paleta.primaria} />
               <Text style={styles.datoTexto}>{fechaLarga(cita.fecha)}</Text>
             </View>
             <View style={styles.datoFila}>
-              <Ionicons name="time-outline" size={20} color="#B80065" />
+              <Ionicons name="time-outline" size={20} color={paleta.primaria} />
               <Text style={styles.datoTexto}>{cita.hora} hrs</Text>
             </View>
           </View>
@@ -114,13 +137,13 @@ export default function PantallaNotasSesion() {
               <Text style={styles.textoPrimario}>Editar notas</Text>
             </TouchableOpacity>
           )}
+          </KeyboardAvoidingView>
         </ScrollView>
-      </View>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
+const crearStyles = (paleta: ReturnType<typeof obtenerPaleta>) => StyleSheet.create({
   flex: { flex: 1 },
   contenedor: { flex: 1, backgroundColor: '#FAFAFA' },
   encabezado: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginBottom: 16 },
@@ -147,26 +170,26 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#FDF2F8',
+    backgroundColor: paleta.suave,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 14,
     borderWidth: 1,
-    borderColor: '#FCE7F3',
+    borderColor: paleta.borde,
   },
-  textoAvatar: { fontSize: 16, fontWeight: 'bold', color: '#B80065' },
+  textoAvatar: { fontSize: 16, fontWeight: 'bold', color: paleta.primaria },
   infoPaciente: { flex: 1 },
   nombre: { fontSize: 16, fontWeight: 'bold', color: '#111827' },
-  tipo: { fontSize: 13, color: '#B80065', marginTop: 2, fontWeight: '500' },
+  tipo: { fontSize: 13, color: paleta.primaria, marginTop: 2, fontWeight: '500' },
   insigniaConfirmada: {
-    backgroundColor: '#FDF2F8',
+    backgroundColor: paleta.suave,
     paddingVertical: 4,
     paddingHorizontal: 10,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#FCE7F3',
+    borderColor: paleta.borde,
   },
-  textoInsignia: { fontSize: 11, fontWeight: 'bold', color: '#B80065' },
+  textoInsignia: { fontSize: 11, fontWeight: 'bold', color: paleta.primaria },
   datoFila: { flexDirection: 'row', alignItems: 'center', gap: 10, width: '100%', paddingVertical: 6 },
   datoTexto: { fontSize: 14, color: '#111827' },
   tituloSeccion: { fontSize: 16, fontWeight: 'bold', color: '#111827', marginTop: 8, marginBottom: 10 },
@@ -184,7 +207,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#B80065',
+    borderColor: paleta.primaria,
     padding: 16,
     minHeight: 180,
     fontSize: 14,
@@ -192,17 +215,17 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   filaBotones: { flexDirection: 'row', gap: 12, marginTop: 20 },
-  botonPrimario: { flex: 1, backgroundColor: '#B80065', padding: 15, borderRadius: 14, alignItems: 'center' },
+  botonPrimario: { flex: 1, backgroundColor: paleta.primaria, padding: 15, borderRadius: 14, alignItems: 'center' },
   botonPrimarioAncho: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#B80065',
+    backgroundColor: paleta.primaria,
     padding: 15,
     borderRadius: 14,
     marginTop: 20,
-    shadowColor: '#B80065',
+    shadowColor: paleta.primaria,
     shadowOpacity: 0.3,
     shadowRadius: 6,
     elevation: 3,

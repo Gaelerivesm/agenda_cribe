@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, TextInput, Modal, ScrollView,
+  View, Text, StyleSheet, TouchableOpacity, TextInput, Modal, ScrollView, Pressable,
   KeyboardAvoidingView, Platform, Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,6 +8,8 @@ import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/dat
 import { Paciente, DatosPaciente } from './PacientesContext';
 import { formatearFecha } from './CitasContext';
 import { fechaLarga } from './utilidades';
+import { useAuth } from './AuthContext';
+import { obtenerPaleta } from './tema';
 
 interface Props {
   visible: boolean;
@@ -23,6 +25,9 @@ const parsearFecha = (texto: string): Date | null => {
 };
 
 export default function FormularioPaciente({ visible, paciente, onCerrar, onGuardar }: Props) {
+  const { usuarioActual } = useAuth();
+  const paleta = obtenerPaleta(usuarioActual?.paleta);
+  const styles = useMemo(() => crearStyles(paleta), [paleta]);
   const [nombre, setNombre] = useState('');
   const [fechaNacimiento, setFechaNacimiento] = useState('');
   const [telefono, setTelefono] = useState('');
@@ -67,16 +72,16 @@ export default function FormularioPaciente({ visible, paciente, onCerrar, onGuar
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onCerrar}>
-      <KeyboardAvoidingView style={styles.fondo} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <View style={styles.contenedor}>
-          <View style={styles.header}>
+      <Pressable style={styles.fondo} onPress={onCerrar}>
+        <Pressable style={styles.contenedor} onPress={evento => evento.stopPropagation()}>
+          <ScrollView contentContainerStyle={styles.scrollContenido} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+              <View style={styles.header}>
             <Text style={styles.titulo}>{paciente ? 'Editar paciente' : 'Nuevo paciente'}</Text>
-            <TouchableOpacity onPress={onCerrar}>
+            <TouchableOpacity onPress={onCerrar} accessibilityLabel="Cerrar ventana">
               <Ionicons name="close" size={24} color="#6b7280" />
             </TouchableOpacity>
-          </View>
-
-          <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+              </View>
             <Text style={styles.label}>Nombre completo</Text>
             <TextInput style={styles.input} value={nombre} onChangeText={setNombre} placeholder="Nombre del paciente" />
 
@@ -86,7 +91,7 @@ export default function FormularioPaciente({ visible, paciente, onCerrar, onGuar
                 style={[styles.input, styles.campoFecha, mostrarSelector && styles.campoActivo]}
                 onPress={() => setMostrarSelector(!mostrarSelector)}
               >
-                <Ionicons name="gift-outline" size={18} color="#B80065" />
+                <Ionicons name="gift-outline" size={18} color={paleta.primaria} />
                 <Text style={fechaNacimiento ? styles.textoFecha : styles.textoPlaceholder}>
                   {fechaNacimiento ? fechaLarga(fechaNacimiento) : 'Opcional'}
                 </Text>
@@ -106,7 +111,7 @@ export default function FormularioPaciente({ visible, paciente, onCerrar, onGuar
                   locale="es-MX"
                   maximumDate={new Date()}
                   display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                  accentColor="#B80065"
+                  accentColor={paleta.primaria}
                   onChange={alCambiarFecha}
                 />
                 {Platform.OS === 'ios' ? (
@@ -140,30 +145,32 @@ export default function FormularioPaciente({ visible, paciente, onCerrar, onGuar
               <Text style={styles.textoGuardar}>{paciente ? 'Guardar cambios' : 'Guardar paciente'}</Text>
             </TouchableOpacity>
             <View style={styles.espacioFinal} />
+            </KeyboardAvoidingView>
           </ScrollView>
-        </View>
-      </KeyboardAvoidingView>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }
 
-const styles = StyleSheet.create({
+const crearStyles = (paleta: ReturnType<typeof obtenerPaleta>) => StyleSheet.create({
   fondo: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   contenedor: { backgroundColor: '#ffffff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: '92%' },
+  scrollContenido: { paddingBottom: 12 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   titulo: { fontSize: 20, fontWeight: 'bold', color: '#111827' },
   label: { fontSize: 13, fontWeight: 'bold', color: '#374151', marginBottom: 5 },
   input: { backgroundColor: '#f9fafb', borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 14, padding: 12, marginBottom: 14, color: '#111827' },
   filaFecha: { flexDirection: 'row', alignItems: 'flex-start' },
   campoFecha: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
-  campoActivo: { borderColor: '#B80065' },
+  campoActivo: { borderColor: paleta.primaria },
   textoFecha: { fontSize: 14, color: '#111827' },
   textoPlaceholder: { fontSize: 14, color: '#9ca3af' },
   botonLimpiar: { paddingLeft: 10, paddingTop: 11 },
   contenedorPicker: { marginBottom: 14, backgroundColor: '#f9fafb', borderRadius: 14, padding: 8 },
   botonListo: { alignSelf: 'flex-end', paddingVertical: 8, paddingHorizontal: 16 },
-  textoBotonListo: { color: '#B80065', fontWeight: 'bold', fontSize: 15 },
-  botonGuardar: { backgroundColor: '#B80065', padding: 15, borderRadius: 14, alignItems: 'center', marginTop: 6 },
+  textoBotonListo: { color: paleta.primaria, fontWeight: 'bold', fontSize: 15 },
+  botonGuardar: { backgroundColor: paleta.primaria, padding: 15, borderRadius: 14, alignItems: 'center', marginTop: 6 },
   textoGuardar: { color: '#ffffff', fontWeight: 'bold', fontSize: 16 },
   espacioFinal: { height: 20 },
 });

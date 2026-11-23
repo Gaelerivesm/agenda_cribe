@@ -8,9 +8,10 @@ Desarrollar una aplicacion movil intuitiva dirigida a profesionales de la salud,
 Buscamos que el programa sea facil de usar desde cualquier dispositivo movil, asegurando que la informacion del paciente y la agenda esten siempre accesibles y actualizadas mediante una navegacion rapida por pestañas.
 
 #INTEGRANTES
-
-1. Integrante 1
-2. Integrante 2
+1. QA - Victor Leonardo Cruz Torres
+2. SEGURIDAD - Gael Manuel Erives Mejia
+3. PROGRAMADOR - Erick Garcia Lopez
+4. PROGRAMADOR - Emiliano Armendariz
 
 #PASOS PARA INSTALAR Y EJECUTAR EL PROGRAMA
 

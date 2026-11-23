@@ -3,19 +3,19 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Linking } 
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CitasContext, Cita, formatearFecha } from './CitasContext';
-import { PacientesContext, DatosPaciente, calcularEdad, diasParaCumple } from './PacientesContext';
-import FormularioPaciente from './Formulariopaciente';
-import AgendarCitaModal from './AgendarCitaModal';
-import { normalizarNombre, iniciales, fechaCorta, marcaAhora, marcaTiempo, etiquetaRelativa } from './utilidades';
-import { useAuth } from './AuthContext';
-import { obtenerPaleta } from './tema';
+import { CitasContext, Cita, formatearFecha } from '../context/CitasContext';
+import { PacientesContext, DatosPaciente, calcularEdad, diasParaCumple } from '../context/PacientesContext';
+import FormularioPaciente from '../components/Formulariopaciente';
+import AgendarCitaModal from '../components/AgendarCitaModal';
+import { normalizarNombre, iniciales, fechaCorta, marcaAhora, marcaTiempo, etiquetaRelativa } from '../utils/utilidades';
+import { useAuth } from '../context/AuthContext';
+import { obtenerPaleta } from '../theme/tema';
 
 export default function PantallaFichaPaciente() {
   const route = useLocalSearchParams<{ pacienteId: string }>();
   const insets = useSafeAreaInsets();
   const { usuarioActual } = useAuth();
-  const paleta = obtenerPaleta(usuarioActual?.paleta);
+  const paleta = obtenerPaleta(usuarioActual?.paleta, usuarioActual?.modoOscuro);
   const styles = useMemo(() => crearStyles(paleta), [paleta]);
 
   const citasContext = useContext(CitasContext);
@@ -106,7 +106,7 @@ export default function PantallaFichaPaciente() {
         <Text style={styles.tipoCita}>{cita.tipo}</Text>
         {cita.notas.length > 0 ? <Text style={styles.notasCita} numberOfLines={1}>{cita.notas}</Text> : null}
       </View>
-      <Ionicons name="chevron-forward" size={18} color="#9ca3af" />
+      <Ionicons name="chevron-forward" size={18} color={paleta.textoSecundario} />
     </TouchableOpacity>
   );
 
@@ -115,11 +115,11 @@ export default function PantallaFichaPaciente() {
       {/* Cabecera con volver y editar */}
       <View style={styles.encabezado}>
         <TouchableOpacity style={styles.botonIcono} onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={24} color="#111827" />
+          <Ionicons name="chevron-back" size={24} color={paleta.texto} />
         </TouchableOpacity>
         <Text style={styles.titulo}>Perfil del paciente</Text>
         <TouchableOpacity style={styles.botonIcono} onPress={() => setModalVisible(true)}>
-          <Ionicons name="pencil" size={20} color="#111827" />
+          <Ionicons name="pencil" size={20} color={paleta.texto} />
         </TouchableOpacity>
       </View>
 
@@ -231,7 +231,7 @@ export default function PantallaFichaPaciente() {
 }
 
 const crearStyles = (paleta: ReturnType<typeof obtenerPaleta>) => StyleSheet.create({
-  contenedor: { flex: 1, backgroundColor: '#FAFAFA' },
+  contenedor: { flex: 1, backgroundColor: paleta.fondo },
   centrado: { justifyContent: 'center', alignItems: 'center' },
   encabezado: {
     flexDirection: 'row',
@@ -244,22 +244,22 @@ const crearStyles = (paleta: ReturnType<typeof obtenerPaleta>) => StyleSheet.cre
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#ffffff',
+    backgroundColor: paleta.tarjeta,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: paleta.inputBorde,
   },
-  titulo: { fontSize: 18, fontWeight: 'bold', color: '#111827' },
+  titulo: { fontSize: 18, fontWeight: 'bold', color: paleta.texto },
   scroll: { paddingHorizontal: 20, paddingBottom: 40 },
   tarjetaPerfil: {
-    backgroundColor: '#ffffff',
+    backgroundColor: paleta.tarjeta,
     borderRadius: 22,
     padding: 24,
     alignItems: 'center',
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#f3f4f6',
+    borderColor: paleta.inputBorde,
     shadowColor: '#000',
     shadowOpacity: 0.03,
     shadowRadius: 6,
@@ -277,8 +277,8 @@ const crearStyles = (paleta: ReturnType<typeof obtenerPaleta>) => StyleSheet.cre
     borderColor: paleta.borde,
   },
   textoAvatar: { fontSize: 26, fontWeight: 'bold', color: paleta.primaria },
-  nombre: { fontSize: 22, fontWeight: 'bold', color: '#111827' },
-  edad: { fontSize: 13, color: '#6b7280', marginTop: 2 },
+  nombre: { fontSize: 22, fontWeight: 'bold', color: paleta.texto },
+  edad: { fontSize: 13, color: paleta.textoSecundario, marginTop: 2 },
   insigniaCumple: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -293,12 +293,12 @@ const crearStyles = (paleta: ReturnType<typeof obtenerPaleta>) => StyleSheet.cre
   },
   textoCumple: { fontSize: 12, fontWeight: 'bold', color: paleta.primaria },
   tarjeta: {
-    backgroundColor: '#ffffff',
+    backgroundColor: paleta.tarjeta,
     borderRadius: 18,
     padding: 16,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#f3f4f6',
+    borderColor: paleta.inputBorde,
     shadowColor: '#000',
     shadowOpacity: 0.02,
     shadowRadius: 5,
@@ -310,19 +310,19 @@ const crearStyles = (paleta: ReturnType<typeof obtenerPaleta>) => StyleSheet.cre
     gap: 12,
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#f9fafb',
+    borderBottomColor: paleta.inputBorde,
   },
   infoDato: {
     flex: 1,
   },
   etiquetaDato: {
     fontSize: 11,
-    color: '#9ca3af',
+    color: paleta.textoSecundario,
     fontWeight: '600',
   },
-  datoTexto: { fontSize: 14, color: '#111827', marginTop: 2 },
-  datoEnlace: { fontSize: 14, color: '#111827', fontWeight: '500', marginTop: 2 },
-  datoVacio: { fontSize: 13, color: '#9ca3af', fontStyle: 'italic', marginTop: 2 },
+  datoTexto: { fontSize: 14, color: paleta.texto, marginTop: 2 },
+  datoEnlace: { fontSize: 14, color: paleta.texto, fontWeight: '500', marginTop: 2 },
+  datoVacio: { fontSize: 13, color: paleta.textoSecundario, fontStyle: 'italic', marginTop: 2 },
   botonAgendarPrincipal: {
     backgroundColor: paleta.primaria,
     flexDirection: 'row',
@@ -344,21 +344,21 @@ const crearStyles = (paleta: ReturnType<typeof obtenerPaleta>) => StyleSheet.cre
     fontWeight: 'bold',
     fontSize: 15,
   },
-  tituloSeccion: { fontSize: 16, fontWeight: 'bold', color: '#111827', marginBottom: 10 },
+  tituloSeccion: { fontSize: 16, fontWeight: 'bold', color: paleta.texto, marginBottom: 10 },
   filaCita: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#f9fafb',
+    borderBottomColor: paleta.inputBorde,
   },
   columnaFecha: { width: 70 },
   horaCita: { fontSize: 14, fontWeight: 'bold', color: paleta.primaria },
-  diaCita: { fontSize: 11, color: '#6b7280', marginTop: 2 },
+  diaCita: { fontSize: 11, color: paleta.textoSecundario, marginTop: 2 },
   infoCita: { flex: 1 },
-  tipoCita: { fontSize: 13, fontWeight: '600', color: '#111827' },
-  notasCita: { fontSize: 11, color: '#9ca3af', marginTop: 2 },
-  vacio: { textAlign: 'center', color: '#9ca3af', fontSize: 13, paddingVertical: 12 },
+  tipoCita: { fontSize: 13, fontWeight: '600', color: paleta.texto },
+  notasCita: { fontSize: 11, color: paleta.textoSecundario, marginTop: 2 },
+  vacio: { textAlign: 'center', color: paleta.textoSecundario, fontSize: 13, paddingVertical: 12 },
   botonPrimario: { backgroundColor: paleta.primaria, paddingVertical: 12, paddingHorizontal: 24, borderRadius: 14, marginTop: 16 },
   textoPrimario: { color: '#ffffff', fontWeight: 'bold', fontSize: 15 },
   botonEliminar: {

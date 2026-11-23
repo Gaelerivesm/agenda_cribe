@@ -1,1 +1,1 @@
-export { default } from '../../../PantallaPacientes';
+export { default } from '../../screens/PantallaPacientes';

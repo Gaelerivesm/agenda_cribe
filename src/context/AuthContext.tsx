@@ -12,6 +12,7 @@ export interface Usuario {
   passwordSalt: string;
   especialidad?: string;
   paleta?: string;
+  modoOscuro?: boolean;
 }
 
 interface ResultadoAuth {
@@ -33,6 +34,7 @@ interface AuthContextType {
   cambiarPassword: (passwordActual: string, nuevaPassword: string) => Promise<ResultadoAuth>;
   actualizarPerfil: (nombre: string, especialidad?: string) => void;
   actualizarPaleta: (paleta: string) => void;
+  actualizarModoOscuro: (modoOscuro: boolean) => void;
 }
 
 const CLAVE_CUENTAS = 'agenda_cribe_cuentas_v2';
@@ -193,7 +195,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const identificadorNormalizado = /^\d{10}$/.test(telefonoBusqueda) ? telefonoBusqueda : busqueda;
     const cuenta = cuentas.find(c => c.correo === identificadorNormalizado || c.usuario === identificadorNormalizado || c.telefono === identificadorNormalizado);
     if (!cuenta) return { exito: false, error: 'No encontramos ninguna cuenta con ese usuario o correo.' };
-    const codigo = String(Math.floor(100000 + Math.random() * 900000));
+
+    const bytesAleatorios = await Crypto.getRandomBytesAsync(3);
+    const valorNumerico = (bytesAleatorios[0] << 16) | (bytesAleatorios[1] << 8) | bytesAleatorios[2];
+    const codigo = String(100000 + (valorNumerico % 900000));
     return { exito: true, codigo, correo: cuenta.correo };
   }, [cuentas]);
 
@@ -248,6 +253,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     void guardarCuentas(cuentas.map(c => c.id === actualizado.id ? actualizado : c));
   }, [cuentas, guardarCuentas, usuarioActual]);
 
+  const actualizarModoOscuro = useCallback((modoOscuro: boolean) => {
+    if (!usuarioActual) return;
+    const actualizado = { ...usuarioActual, modoOscuro };
+    setUsuarioActual(actualizado);
+    void guardarCuentas(cuentas.map(c => c.id === actualizado.id ? actualizado : c));
+  }, [cuentas, guardarCuentas, usuarioActual]);
+
   const valor = useMemo(() => ({
     usuarioActual,
     estaAutenticado: usuarioActual !== null,
@@ -260,7 +272,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     cambiarPassword,
     actualizarPerfil,
     actualizarPaleta,
-  }), [usuarioActual, cargandoAuth, iniciarSesion, registrarse, cerrarSesion, generarCodigoRecuperacion, restablecerPassword, cambiarPassword, actualizarPerfil, actualizarPaleta]);
+    actualizarModoOscuro,
+  }), [usuarioActual, cargandoAuth, iniciarSesion, registrarse, cerrarSesion, generarCodigoRecuperacion, restablecerPassword, cambiarPassword, actualizarPerfil, actualizarPaleta, actualizarModoOscuro]);
 
   return <AuthContext.Provider value={valor}>{children}</AuthContext.Provider>;
 };

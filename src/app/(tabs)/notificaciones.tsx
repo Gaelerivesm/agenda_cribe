@@ -1,1 +1,1 @@
-export { default } from '../../../PantallaNotificaciones';
+export { default } from '../../screens/PantallaNotificaciones';

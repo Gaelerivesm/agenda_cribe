@@ -1,14 +1,14 @@
 import React, { useMemo, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuth, validarPassword } from './AuthContext';
-import { obtenerPaleta } from './tema';
+import { useAuth, validarPassword } from '../context/AuthContext';
+import { obtenerPaleta } from '../theme/tema';
 
 interface Props { visible: boolean; onCerrar: () => void }
 
 export default function ModalCambioPassword({ visible, onCerrar }: Props) {
   const { cambiarPassword, usuarioActual } = useAuth();
-  const paleta = obtenerPaleta(usuarioActual?.paleta);
+  const paleta = obtenerPaleta(usuarioActual?.paleta, usuarioActual?.modoOscuro);
   const styles = useMemo(() => crearStyles(paleta), [paleta]);
   const [actual, setActual] = useState('');
   const [nueva, setNueva] = useState('');
@@ -44,7 +44,7 @@ export default function ModalCambioPassword({ visible, onCerrar }: Props) {
             <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
               <View style={styles.header}>
                 <Text style={styles.titulo}>Cambiar contraseña</Text>
-                <TouchableOpacity onPress={cerrar} accessibilityLabel="Cerrar ventana"><Ionicons name="close" size={22} color="#6b7280" /></TouchableOpacity>
+                <TouchableOpacity onPress={cerrar} accessibilityLabel="Cerrar ventana"><Ionicons name="close" size={22} color={paleta.textoSecundario} /></TouchableOpacity>
               </View>
               <Text style={styles.label}>Contraseña actual</Text>
               <TextInput style={styles.input} value={actual} onChangeText={setActual} secureTextEntry placeholder="Escribe tu contraseña actual" />
@@ -64,12 +64,12 @@ export default function ModalCambioPassword({ visible, onCerrar }: Props) {
 
 const crearStyles = (paleta: ReturnType<typeof obtenerPaleta>) => StyleSheet.create({
   fondo: { flex: 1, backgroundColor: 'rgba(0,0,0,0.42)', justifyContent: 'center', padding: 22 },
-  tarjeta: { maxHeight: '90%', backgroundColor: '#fff', borderRadius: 22, padding: 20 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 },
-  titulo: { fontSize: 18, fontWeight: '700', color: '#111827' },
-  label: { color: '#374151', fontSize: 13, fontWeight: '700', marginBottom: 6 },
-  input: { borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 13, padding: 12, marginBottom: 14, color: '#111827' },
-  requisito: { color: '#6b7280', fontSize: 11, marginTop: -7, marginBottom: 13 },
-  boton: { backgroundColor: paleta.primaria, borderRadius: 13, alignItems: 'center', padding: 14, marginTop: 8 },
+  tarjeta: { backgroundColor: paleta.tarjeta, borderRadius: 24, padding: 20 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
+  titulo: { color: paleta.texto, fontSize: 18, fontWeight: '700' },
+  label: { fontSize: 13, fontWeight: '600', color: paleta.textoSecundario, marginBottom: 6 },
+  input: { minHeight: 46, paddingHorizontal: 12, marginBottom: 10, backgroundColor: paleta.inputFondo, borderWidth: 1, borderColor: paleta.inputBorde, borderRadius: 14, color: paleta.texto },
+  requisito: { fontSize: 12, color: paleta.textoSecundario, marginBottom: 10 },
+  boton: { alignItems: 'center', backgroundColor: paleta.primaria, padding: 14, borderRadius: 14, marginTop: 10 },
   textoBoton: { color: '#fff', fontWeight: '700' },
 });

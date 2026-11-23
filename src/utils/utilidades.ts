@@ -1,4 +1,4 @@
-import { formatearFecha } from './CitasContext';
+import { formatearFecha } from '../context/CitasContext';
 
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 

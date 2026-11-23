@@ -1,16 +1,15 @@
-import React, { useState, useRef, useContext, useMemo, useEffect } from 'react';
+import React, { useState, useRef, useContext, useMemo, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Animated, PanResponder, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CitasContext, Cita, formatearFecha } from './CitasContext';
-import AgendarCitaModal from './AgendarCitaModal';
-import { obtenerPaleta } from './tema';
-import { useAuth } from './AuthContext';
+import { CitasContext, Cita, formatearFecha } from '../context/CitasContext';
+import AgendarCitaModal from '../components/AgendarCitaModal';
+import { obtenerPaleta } from '../theme/tema';
+import { useAuth } from '../context/AuthContext';
 
 type Vista = 'Semana' | 'Mes' | 'Año';
 type TipoAnimacion = 'izquierda' | 'derecha';
-type Direccion = 1 | -1;
 
 const VISTAS: Vista[] = ['Semana', 'Mes', 'Año'];
 const NOMBRES_MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
@@ -18,9 +17,6 @@ const NOMBRES_DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Vie
 const LETRAS_DIA = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
 const HORAS_DIA = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, '0')}:00`);
 const ANCHO_PANTALLA = Dimensions.get('window').width;
-
-const COLOR_OSCURO = '#111827';
-const COLOR_FONDO = '#FAFAFA';
 
 const parsearFecha = (texto: string): Date | null => {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(texto.trim());
@@ -51,51 +47,48 @@ const construirFilasMes = (anio: number, mes: number): (number | null)[][] => {
 };
 
 function useTransicion() {
-  const traslacionX = useRef(new Animated.Value(0)).current;
-  const opacidad = useRef(new Animated.Value(1)).current;
+  const [traslacionX] = useState(() => new Animated.Value(0));
+  const [opacidad] = useState(() => new Animated.Value(1));
   const ocupado = useRef(false);
 
-  const animar = (tipo: TipoAnimacion, cambio: () => void) => {
-    if (ocupado.current) {
-      cambio();
-      return;
-    }
+  const animar = useCallback((tipo: TipoAnimacion, cambio: () => void) => {
+    if (ocupado.current) return;
     ocupado.current = true;
     const salidaX = tipo === 'izquierda' ? -ANCHO_PANTALLA * 0.25 : tipo === 'derecha' ? ANCHO_PANTALLA * 0.25 : 0;
     Animated.parallel([
       Animated.timing(opacidad, { toValue: 0, duration: 110, useNativeDriver: true }),
       Animated.timing(traslacionX, { toValue: salidaX, duration: 110, useNativeDriver: true }),
-    ]).start(() => {
+    ]).start(({ finished }) => {
+      if (!finished) {
+        traslacionX.setValue(0);
+        opacidad.setValue(1);
+        ocupado.current = false;
+        return;
+      }
       cambio();
       traslacionX.setValue(-salidaX);
       Animated.parallel([
         Animated.timing(opacidad, { toValue: 1, duration: 200, useNativeDriver: true }),
         Animated.timing(traslacionX, { toValue: 0, duration: 200, useNativeDriver: true }),
-      ]).start(() => {
+      ]).start(({ finished: termino }) => {
+        if (!termino) {
+          traslacionX.setValue(0);
+          opacidad.setValue(1);
+        }
         ocupado.current = false;
       });
     });
-  };
+  }, [opacidad, traslacionX]);
 
-  const estilo = { opacity: opacidad, transform: [{ translateX: traslacionX }] };
-  return { animar, estilo };
+  const estilo = useMemo(() => ({ opacity: opacidad, transform: [{ translateX: traslacionX }] }), [opacidad, traslacionX]);
+  return useMemo(() => ({ animar, estilo }), [animar, estilo]);
 }
-
-const crearPan = (accion: React.MutableRefObject<(direccion: Direccion) => void>) =>
-  PanResponder.create({
-    onMoveShouldSetPanResponderCapture: (_, g) =>
-      Math.abs(g.dx) > 20 && Math.abs(g.dx) > Math.abs(g.dy) * 2,
-    onPanResponderRelease: (_, g) => {
-      if (g.dx < -50) accion.current(1);
-      else if (g.dx > 50) accion.current(-1);
-    },
-  });
 
 export default function PantallaCalendario() {
   const route = useLocalSearchParams<{ nuevaCita?: string; paciente?: string }>();
   const insets = useSafeAreaInsets();
   const { usuarioActual } = useAuth();
-  const paleta = obtenerPaleta(usuarioActual?.paleta);
+  const paleta = obtenerPaleta(usuarioActual?.paleta, usuarioActual?.modoOscuro);
   const styles = useMemo(() => crearStyles(paleta), [paleta]);
 
   const context = useContext(CitasContext);
@@ -130,40 +123,69 @@ export default function PantallaCalendario() {
   const transFranja = useTransicion();
   const transLista = useTransicion();
 
-  const moverDias = (n: number) =>
-    setFechaActiva(p => new Date(p.getFullYear(), p.getMonth(), p.getDate() + n));
-  const moverMeses = (n: number) =>
-    setFechaActiva(p => new Date(p.getFullYear(), p.getMonth() + n, 1));
-  const moverAnios = (n: number) =>
-    setFechaActiva(p => new Date(p.getFullYear() + n, 0, 1));
-  const moverPeriodo = (n: number) => {
+  const moverDias = useCallback((n: number) =>
+    setFechaActiva(p => new Date(p.getFullYear(), p.getMonth(), p.getDate() + n)), [setFechaActiva]);
+  const moverMeses = useCallback((n: number) =>
+    setFechaActiva(p => new Date(p.getFullYear(), p.getMonth() + n, 1)), [setFechaActiva]);
+  const moverAnios = useCallback((n: number) =>
+    setFechaActiva(p => new Date(p.getFullYear() + n, 0, 1)), [setFechaActiva]);
+  const moverPeriodo = useCallback((n: number) => {
     if (vistaActiva === 'Semana') moverDias(7 * n);
     else if (vistaActiva === 'Mes') moverMeses(n);
     else moverAnios(n);
-  };
+  }, [vistaActiva, moverDias, moverMeses, moverAnios]);
 
-  const tipoDeslizar = (d: Direccion): TipoAnimacion => (d === 1 ? 'izquierda' : 'derecha');
+  const cambiarPeriodoAnimado = useCallback((n: number) => {
+    transVista.animar(n < 0 ? 'derecha' : 'izquierda', () => moverPeriodo(n));
+  }, [moverPeriodo, transVista]);
 
-  const deslizarFranja = useRef<(d: Direccion) => void>(() => {});
-  const deslizarLista = useRef<(d: Direccion) => void>(() => {});
-  const deslizarGeneral = useRef<(d: Direccion) => void>(() => {});
+  const panFranja = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponderCapture: (_, g) =>
+          Math.abs(g.dx) > 20 && Math.abs(g.dx) > Math.abs(g.dy) * 2,
+        onPanResponderRelease: (_, g) => {
+          if (g.dx < -50) {
+            transLista.animar('izquierda', () => {});
+            transFranja.animar('izquierda', () => moverDias(7));
+          } else if (g.dx > 50) {
+            transLista.animar('derecha', () => {});
+            transFranja.animar('derecha', () => moverDias(-7));
+          }
+        },
+      }),
+    [transLista, transFranja, moverDias]
+  );
 
-  deslizarFranja.current = (d: Direccion) => {
-    transLista.animar(tipoDeslizar(d), () => {});
-    transFranja.animar(tipoDeslizar(d), () => moverDias(7 * d));
-  };
-  deslizarLista.current = (d: Direccion) => {
-    transLista.animar(tipoDeslizar(d), () => moverDias(d));
-  };
-  deslizarGeneral.current = (d: Direccion) => {
-    transVista.animar(tipoDeslizar(d), () => {
-      moverPeriodo(d);
-    });
-  };
+  const panLista = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponderCapture: (_, g) =>
+          Math.abs(g.dx) > 20 && Math.abs(g.dx) > Math.abs(g.dy) * 2,
+        onPanResponderRelease: (_, g) => {
+          if (g.dx < -50) transLista.animar('izquierda', () => moverDias(1));
+          else if (g.dx > 50) transLista.animar('derecha', () => moverDias(-1));
+        },
+      }),
+    [transLista, moverDias]
+  );
 
-  const panFranja = useRef(crearPan(deslizarFranja)).current;
-  const panLista = useRef(crearPan(deslizarLista)).current;
-  const panGeneral = useRef(crearPan(deslizarGeneral)).current;
+  const panGeneral = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponderCapture: (_, g) =>
+          Math.abs(g.dx) > 20 && Math.abs(g.dx) > Math.abs(g.dy) * 2,
+        onPanResponderRelease: (_, g) => {
+          const dir = g.dx < -50 ? 1 : g.dx > 50 ? -1 : 0;
+          if (dir === 0) return;
+          const tipo: TipoAnimacion = dir === 1 ? 'izquierda' : 'derecha';
+          transVista.animar(tipo, () => {
+            moverPeriodo(dir);
+          });
+        },
+      }),
+    [transVista, moverPeriodo]
+  );
 
   const cambiarVista = (nueva: Vista, fechaDestino?: Date) => {
     if (nueva === vistaActiva && !fechaDestino) return;
@@ -187,10 +209,14 @@ export default function PantallaCalendario() {
 
   useEffect(() => {
     if (route.nuevaCita === 'true') {
-      abrirModalNueva(typeof route.paciente === 'string' ? route.paciente : undefined);
+      const paciente = typeof route.paciente === 'string' ? route.paciente : undefined;
       router.setParams({ nuevaCita: undefined, paciente: undefined });
+      setTimeout(() => {
+        abrirModalNueva(paciente);
+      }, 0);
     }
-  }, [route.nuevaCita]);
+  }, [route.nuevaCita, route.paciente]);
+
   const renderPuntos = (fechaStr: string) => {
     const cantidad = Math.min((citasPorFecha[fechaStr] ?? []).length, 3);
     return (
@@ -394,11 +420,11 @@ export default function PantallaCalendario() {
               <Text style={styles.tituloAnio}>{fechaActiva.getFullYear()}</Text>
             </Text>
             <View style={styles.controlesFlechas}>
-              <TouchableOpacity onPress={() => moverPeriodo(-1)} style={styles.botonFlecha}>
-                <Ionicons name="chevron-back" size={18} color="#4b5563" />
+              <TouchableOpacity onPress={() => cambiarPeriodoAnimado(-1)} style={styles.botonFlecha}>
+                <Ionicons name="chevron-back" size={18} color={paleta.textoSecundario} />
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => moverPeriodo(1)} style={styles.botonFlecha}>
-                <Ionicons name="chevron-forward" size={18} color="#4b5563" />
+              <TouchableOpacity onPress={() => cambiarPeriodoAnimado(1)} style={styles.botonFlecha}>
+                <Ionicons name="chevron-forward" size={18} color={paleta.textoSecundario} />
               </TouchableOpacity>
             </View>
           </View>
@@ -448,7 +474,7 @@ export default function PantallaCalendario() {
 
 const crearStyles = (paleta: ReturnType<typeof obtenerPaleta>) => StyleSheet.create({
   flex: { flex: 1 },
-  contenedor: { flex: 1, backgroundColor: COLOR_FONDO },
+  contenedor: { flex: 1, backgroundColor: paleta.fondo },
   encabezadoPrincipal: {
     paddingHorizontal: 20,
     marginBottom: 16,
@@ -456,7 +482,7 @@ const crearStyles = (paleta: ReturnType<typeof obtenerPaleta>) => StyleSheet.cre
   etiquetaSuperior: {
     fontSize: 11,
     fontWeight: 'bold',
-    color: '#9ca3af',
+    color: paleta.textoSecundario,
     letterSpacing: 1,
     marginBottom: 2,
   },
@@ -469,7 +495,7 @@ const crearStyles = (paleta: ReturnType<typeof obtenerPaleta>) => StyleSheet.cre
   tituloFechaMes: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: COLOR_OSCURO,
+    color: paleta.texto,
   },
   tituloAnio: {
     color: paleta.primaria,
@@ -482,15 +508,15 @@ const crearStyles = (paleta: ReturnType<typeof obtenerPaleta>) => StyleSheet.cre
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#ffffff',
+    backgroundColor: paleta.tarjeta,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: paleta.inputBorde,
   },
   selectorVista: {
     flexDirection: 'row',
-    backgroundColor: '#f3f4f6',
+    backgroundColor: paleta.inputFondo,
     borderRadius: 16,
     padding: 3,
   },
@@ -501,7 +527,7 @@ const crearStyles = (paleta: ReturnType<typeof obtenerPaleta>) => StyleSheet.cre
     alignItems: 'center',
   },
   botonVistaActivo: {
-    backgroundColor: '#ffffff',
+    backgroundColor: paleta.tarjeta,
     elevation: 2,
     shadowColor: '#000',
     shadowOpacity: 0.08,
@@ -509,7 +535,7 @@ const crearStyles = (paleta: ReturnType<typeof obtenerPaleta>) => StyleSheet.cre
   },
   textoVista: {
     fontSize: 13,
-    color: '#6b7280',
+    color: paleta.textoSecundario,
     fontWeight: '600',
   },
   textoVistaActivo: {
@@ -519,7 +545,7 @@ const crearStyles = (paleta: ReturnType<typeof obtenerPaleta>) => StyleSheet.cre
 
   contenedorFranja: {
     borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
+    borderBottomColor: paleta.inputBorde,
     paddingBottom: 12,
   },
   franjaSemana: {
@@ -533,7 +559,7 @@ const crearStyles = (paleta: ReturnType<typeof obtenerPaleta>) => StyleSheet.cre
   },
   letraDia: {
     fontSize: 12,
-    color: '#9ca3af',
+    color: paleta.textoSecundario,
     marginBottom: 8,
     fontWeight: '600',
   },
@@ -553,7 +579,7 @@ const crearStyles = (paleta: ReturnType<typeof obtenerPaleta>) => StyleSheet.cre
   numeroDia: {
     fontSize: 15,
     fontWeight: '500',
-    color: COLOR_OSCURO,
+    color: paleta.texto,
   },
   numeroHoy: {
     color: paleta.primaria,
@@ -579,7 +605,7 @@ const crearStyles = (paleta: ReturnType<typeof obtenerPaleta>) => StyleSheet.cre
   etiquetaFecha: {
     fontSize: 13,
     fontWeight: 'bold',
-    color: '#6b7280',
+    color: paleta.textoSecundario,
     paddingHorizontal: 20,
     marginVertical: 12,
   },
@@ -597,14 +623,14 @@ const crearStyles = (paleta: ReturnType<typeof obtenerPaleta>) => StyleSheet.cre
     width: 50,
     fontSize: 12,
     fontWeight: '500',
-    color: '#9ca3af',
+    color: paleta.textoSecundario,
     marginTop: 8,
   },
   contenedorCita: {
     flex: 1,
     paddingLeft: 12,
     borderLeftWidth: 1,
-    borderLeftColor: '#f3f4f6',
+    borderLeftColor: paleta.inputBorde,
   },
   tarjetaCitaTimeline: {
     flexDirection: 'row',
@@ -638,7 +664,7 @@ const crearStyles = (paleta: ReturnType<typeof obtenerPaleta>) => StyleSheet.cre
     fontWeight: 'bold',
   },
   badgeEnCurso: {
-    backgroundColor: '#ffffff',
+    backgroundColor: paleta.tarjeta,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 8,
@@ -651,16 +677,16 @@ const crearStyles = (paleta: ReturnType<typeof obtenerPaleta>) => StyleSheet.cre
   nombrePacienteCitaTimeline: {
     fontSize: 15,
     fontWeight: 'bold',
-    color: COLOR_OSCURO,
+    color: paleta.texto,
   },
   tipoCitaTimeline: {
     fontSize: 12,
-    color: '#6b7280',
+    color: paleta.textoSecundario,
     marginTop: 2,
   },
   notasCitaTimeline: {
     fontSize: 11,
-    color: '#9ca3af',
+    color: paleta.textoSecundario,
     marginTop: 2,
   },
   accionesCitaTimeline: {
@@ -670,15 +696,15 @@ const crearStyles = (paleta: ReturnType<typeof obtenerPaleta>) => StyleSheet.cre
     marginLeft: 8,
   },
   botonAccionIcono: {
-    backgroundColor: '#ffffff',
+    backgroundColor: paleta.tarjeta,
     padding: 6,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#fce7f3',
+    borderColor: paleta.borde,
   },
   lineaLibre: {
     height: 1,
-    backgroundColor: '#f9fafb',
+    backgroundColor: paleta.inputFondo,
     marginTop: 18,
   },
 
@@ -691,7 +717,7 @@ const crearStyles = (paleta: ReturnType<typeof obtenerPaleta>) => StyleSheet.cre
     flex: 1,
     textAlign: 'center',
     fontSize: 11,
-    color: '#9ca3af',
+    color: paleta.textoSecundario,
     fontWeight: 'bold',
   },
   filaMes: {
@@ -713,7 +739,7 @@ const crearStyles = (paleta: ReturnType<typeof obtenerPaleta>) => StyleSheet.cre
   },
   numeroMes: {
     fontSize: 15,
-    color: COLOR_OSCURO,
+    color: paleta.texto,
   },
 
   cuadriculaAnio: {
@@ -726,11 +752,11 @@ const crearStyles = (paleta: ReturnType<typeof obtenerPaleta>) => StyleSheet.cre
   miniMes: {
     width: '31%',
     marginBottom: 20,
-    backgroundColor: '#ffffff',
+    backgroundColor: paleta.tarjeta,
     borderRadius: 12,
     padding: 8,
     borderWidth: 1,
-    borderColor: '#f3f4f6',
+    borderColor: paleta.inputBorde,
   },
   miniMesTitulo: {
     fontSize: 13,
@@ -739,10 +765,10 @@ const crearStyles = (paleta: ReturnType<typeof obtenerPaleta>) => StyleSheet.cre
     marginBottom: 6,
   },
   miniFila: { flexDirection: 'row' },
-  miniCabecera: { flex: 1, fontSize: 8, color: '#9ca3af', textAlign: 'center', marginBottom: 2 },
+  miniCabecera: { flex: 1, fontSize: 8, color: paleta.textoSecundario, textAlign: 'center', marginBottom: 2 },
   miniCelda: { flex: 1, height: 16, alignItems: 'center', justifyContent: 'center' },
   miniCirculo: { width: 14, height: 14, borderRadius: 7, alignItems: 'center', justifyContent: 'center' },
-  miniNumero: { fontSize: 8, color: COLOR_OSCURO },
+  miniNumero: { fontSize: 8, color: paleta.texto },
 
   botonFlotante: {
     position: 'absolute',
@@ -762,23 +788,23 @@ const crearStyles = (paleta: ReturnType<typeof obtenerPaleta>) => StyleSheet.cre
   },
 
   modalFondo: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
-  modalContenedor: { backgroundColor: '#ffffff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: '92%' },
+  modalContenedor: { backgroundColor: paleta.tarjeta, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: '92%' },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  modalTitulo: { fontSize: 20, fontWeight: 'bold', color: COLOR_OSCURO },
+  modalTitulo: { fontSize: 20, fontWeight: 'bold', color: paleta.texto },
   filaInputs: { flexDirection: 'row', justifyContent: 'space-between' },
   mitadInput: { width: '48%' },
-  label: { fontSize: 13, fontWeight: 'bold', color: '#374151', marginBottom: 5 },
-  input: { backgroundColor: '#f9fafb', borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 14, padding: 12, marginBottom: 14, color: COLOR_OSCURO },
+  label: { fontSize: 13, fontWeight: 'bold', color: paleta.textoSecundario, marginBottom: 5 },
+  input: { backgroundColor: paleta.inputFondo, borderWidth: 1, borderColor: paleta.inputBorde, borderRadius: 14, padding: 12, marginBottom: 14, color: paleta.texto },
   inputArea: { height: 90, textAlignVertical: 'top' },
   campoSelector: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   campoActivo: { borderColor: paleta.primaria },
-  textoSelector: { fontSize: 14, color: COLOR_OSCURO },
-  textoPlaceholder: { color: '#9ca3af' },
-  contenedorPicker: { marginBottom: 14, backgroundColor: '#f9fafb', borderRadius: 14, padding: 8 },
+  textoSelector: { fontSize: 14, color: paleta.texto },
+  textoPlaceholder: { color: paleta.textoSecundario },
+  contenedorPicker: { marginBottom: 14, backgroundColor: paleta.inputFondo, borderRadius: 14, padding: 8 },
   botonListo: { alignSelf: 'flex-end', paddingVertical: 8, paddingHorizontal: 16 },
   textoBotonListo: { color: paleta.primaria, fontWeight: 'bold', fontSize: 15 },
   filaSwitch: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  labelSwitch: { fontSize: 14, fontWeight: 'bold', color: COLOR_OSCURO },
+  labelSwitch: { fontSize: 14, fontWeight: 'bold', color: paleta.texto },
   botonGuardar: { backgroundColor: paleta.primaria, padding: 15, borderRadius: 14, alignItems: 'center' },
   textoBotonGuardar: { color: '#ffffff', fontWeight: 'bold', fontSize: 16 },
   botonEliminar: { padding: 15, borderRadius: 14, alignItems: 'center', marginTop: 10, marginBottom: 20, borderWidth: 1, borderColor: '#dc2626' },

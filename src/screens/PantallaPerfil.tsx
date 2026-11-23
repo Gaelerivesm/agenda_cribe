@@ -1,12 +1,12 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, Modal, TextInput, ScrollView, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Modal, TextInput, ScrollView, Pressable, KeyboardAvoidingView, Platform, Switch } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAuth } from './AuthContext';
-import { iniciales } from './utilidades';
-import ModalCambioPassword from './ModalCambioPassword';
-import ModalPaletas from './ModalPaletas';
-import { obtenerPaleta } from './tema';
+import { useAuth } from '../context/AuthContext';
+import { iniciales } from '../utils/utilidades';
+import ModalCambioPassword from '../components/ModalCambioPassword';
+import ModalPaletas from '../components/ModalPaletas';
+import { obtenerPaleta } from '../theme/tema';
 import { router } from 'expo-router';
 
 interface PantallaPerfilProps {
@@ -15,7 +15,7 @@ interface PantallaPerfilProps {
 
 export default function PantallaPerfil({ onCerrarSesion }: PantallaPerfilProps) {
   const insets = useSafeAreaInsets();
-  const { usuarioActual, cerrarSesion, actualizarPerfil } = useAuth();
+  const { usuarioActual, cerrarSesion, actualizarPerfil, actualizarModoOscuro } = useAuth();
 
   const [modalEditarVisible, setModalEditarVisible] = useState(false);
   const [modalPasswordVisible, setModalPasswordVisible] = useState(false);
@@ -56,7 +56,8 @@ export default function PantallaPerfil({ onCerrarSesion }: PantallaPerfilProps) 
   };
 
   const inicialesDoc = usuarioActual?.nombre ? iniciales(usuarioActual.nombre) : 'DR';
-  const paleta = obtenerPaleta(usuarioActual?.paleta);
+  const esOscuro = Boolean(usuarioActual?.modoOscuro);
+  const paleta = obtenerPaleta(usuarioActual?.paleta, esOscuro);
   const styles = useMemo(() => crearStyles(paleta), [paleta]);
 
   return (
@@ -74,6 +75,30 @@ export default function PantallaPerfil({ onCerrarSesion }: PantallaPerfilProps) 
           {usuarioActual?.correo ? <Text style={styles.correoDoctor}>{usuarioActual.correo}</Text> : null}
         </View>
 
+        {/* Switch global de aspecto */}
+        <View style={styles.seccionAspecto}>
+          <Text style={styles.etiquetaSeccion}>ASPECTO</Text>
+          <View style={styles.tarjetaAspecto}>
+            <View style={styles.filaAspecto}>
+              <View style={styles.infoAspecto}>
+                <Ionicons name={esOscuro ? 'moon-outline' : 'sunny-outline'} size={21} color={paleta.primaria} />
+                <View style={styles.textosAspecto}>
+                  <Text style={styles.nombreModo}>{esOscuro ? 'Modo oscuro' : 'Modo claro'}</Text>
+                  <Text style={styles.descripcionModo}>Aplica el aspecto a toda la aplicación</Text>
+                </View>
+              </View>
+              <Switch
+                value={esOscuro}
+                onValueChange={actualizarModoOscuro}
+                trackColor={{ false: paleta.inputBorde, true: paleta.primaria }}
+                thumbColor="#FFFFFF"
+                ios_backgroundColor={paleta.inputBorde}
+                accessibilityLabel="Activar modo oscuro"
+              />
+            </View>
+          </View>
+        </View>
+
         {/* Menú de opciones */}
         <View style={styles.menuOpciones}>
           <TouchableOpacity
@@ -85,10 +110,10 @@ export default function PantallaPerfil({ onCerrarSesion }: PantallaPerfilProps) 
             }}
           >
             <View style={styles.filaOpcion}>
-              <Ionicons name="person-outline" size={20} color="#4b5563" style={styles.iconoOpcion} />
+              <Ionicons name="person-outline" size={20} color={paleta.textoSecundario} style={styles.iconoOpcion} />
               <Text style={styles.textoOpcion}>Editar información personal</Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color="#9ca3af" />
+            <Ionicons name="chevron-forward" size={18} color={paleta.textoSecundario} />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.opcionItem} onPress={() => setModalPaletasVisible(true)}>
@@ -96,7 +121,7 @@ export default function PantallaPerfil({ onCerrarSesion }: PantallaPerfilProps) 
               <Ionicons name="color-palette-outline" size={20} color={paleta.primaria} style={styles.iconoOpcion} />
               <Text style={styles.textoOpcion}>Color de interfaz</Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color="#9ca3af" />
+            <Ionicons name="chevron-forward" size={18} color={paleta.textoSecundario} />
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -106,10 +131,10 @@ export default function PantallaPerfil({ onCerrarSesion }: PantallaPerfilProps) 
             }
           >
             <View style={styles.filaOpcion}>
-              <Ionicons name="notifications-outline" size={20} color="#4b5563" style={styles.iconoOpcion} />
+              <Ionicons name="notifications-outline" size={20} color={paleta.textoSecundario} style={styles.iconoOpcion} />
               <Text style={styles.textoOpcion}>Configuración de notificaciones</Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color="#9ca3af" />
+            <Ionicons name="chevron-forward" size={18} color={paleta.textoSecundario} />
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -117,10 +142,10 @@ export default function PantallaPerfil({ onCerrarSesion }: PantallaPerfilProps) 
             onPress={() => setModalPasswordVisible(true)}
           >
             <View style={styles.filaOpcion}>
-              <Ionicons name="lock-closed-outline" size={20} color="#4b5563" style={styles.iconoOpcion} />
+              <Ionicons name="lock-closed-outline" size={20} color={paleta.textoSecundario} style={styles.iconoOpcion} />
               <Text style={styles.textoOpcion}>Seguridad y contraseña</Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color="#9ca3af" />
+            <Ionicons name="chevron-forward" size={18} color={paleta.textoSecundario} />
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -130,14 +155,14 @@ export default function PantallaPerfil({ onCerrarSesion }: PantallaPerfilProps) 
             }
           >
             <View style={styles.filaOpcion}>
-              <Ionicons name="help-circle-outline" size={20} color="#4b5563" style={styles.iconoOpcion} />
+              <Ionicons name="help-circle-outline" size={20} color={paleta.textoSecundario} style={styles.iconoOpcion} />
               <Text style={styles.textoOpcion}>Ayuda y soporte</Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color="#9ca3af" />
+            <Ionicons name="chevron-forward" size={18} color={paleta.textoSecundario} />
           </TouchableOpacity>
         </View>
 
-        {/* Botón de Cerrar Sesión en Rosa Suave / Magenta */}
+        {/* Botón de Cerrar Sesión */}
         <TouchableOpacity style={styles.botonCerrarSesion} onPress={manejarCierreSesion}>
           <Ionicons name="log-out-outline" size={20} color={paleta.primaria} style={styles.iconoLogout} />
           <Text style={styles.textoCerrarSesion}>Cerrar sesión</Text>
@@ -150,41 +175,41 @@ export default function PantallaPerfil({ onCerrarSesion }: PantallaPerfilProps) 
           <Pressable style={styles.modalTarjeta} onPress={evento => evento.stopPropagation()}>
             <ScrollView keyboardShouldPersistTaps="handled">
               <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-            <View style={styles.modalEncabezado}>
-              <Text style={styles.modalTitulo}>Editar información</Text>
-              <TouchableOpacity onPress={() => setModalEditarVisible(false)} accessibilityLabel="Cerrar ventana">
-                <Ionicons name="close" size={22} color="#6b7280" />
-              </TouchableOpacity>
-            </View>
-            <Text style={styles.modalSubtitulo}>Actualiza tus datos profesionales:</Text>
+                <View style={styles.modalEncabezado}>
+                  <Text style={styles.modalTitulo}>Editar información</Text>
+                  <TouchableOpacity onPress={() => setModalEditarVisible(false)} accessibilityLabel="Cerrar ventana">
+                    <Ionicons name="close" size={22} color={paleta.textoSecundario} />
+                  </TouchableOpacity>
+                </View>
+                <Text style={styles.modalSubtitulo}>Actualiza tus datos profesionales:</Text>
 
-            <Text style={styles.labelModal}>Nombre completo:</Text>
-            <TextInput
-              style={styles.inputModal}
-              value={nuevoNombre}
-              onChangeText={setNuevoNombre}
-              placeholder="Ej. Dr. Alejandro Ruiz"
-            />
+                <Text style={styles.labelModal}>Nombre completo:</Text>
+                <TextInput
+                  style={styles.inputModal}
+                  value={nuevoNombre}
+                  onChangeText={setNuevoNombre}
+                  placeholder="Ej. Dr. Alejandro Ruiz"
+                />
 
-            <Text style={styles.labelModal}>Especialidad:</Text>
-            <TextInput
-              style={styles.inputModal}
-              value={nuevaEspecialidad}
-              onChangeText={setNuevaEspecialidad}
-              placeholder="Ej. Terapeuta / Psicólogo"
-            />
+                <Text style={styles.labelModal}>Especialidad:</Text>
+                <TextInput
+                  style={styles.inputModal}
+                  value={nuevaEspecialidad}
+                  onChangeText={setNuevaEspecialidad}
+                  placeholder="Ej. Terapeuta / Psicólogo"
+                />
 
-            <View style={styles.filaModalBotones}>
-              <TouchableOpacity
-                style={styles.botonModalCancelar}
-                onPress={() => setModalEditarVisible(false)}
-              >
-                <Text style={styles.textoModalCancelar}>Cancelar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.botonModalGuardar} onPress={guardarCambios}>
-                <Text style={styles.textoModalGuardar}>Guardar</Text>
-              </TouchableOpacity>
-            </View>
+                <View style={styles.filaModalBotones}>
+                  <TouchableOpacity
+                    style={styles.botonModalCancelar}
+                    onPress={() => setModalEditarVisible(false)}
+                  >
+                    <Text style={styles.textoModalCancelar}>Cancelar</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.botonModalGuardar} onPress={guardarCambios}>
+                    <Text style={styles.textoModalGuardar}>Guardar</Text>
+                  </TouchableOpacity>
+                </View>
               </KeyboardAvoidingView>
             </ScrollView>
           </Pressable>
@@ -197,19 +222,19 @@ export default function PantallaPerfil({ onCerrarSesion }: PantallaPerfilProps) 
 }
 
 const crearStyles = (paleta: ReturnType<typeof obtenerPaleta>) => StyleSheet.create({
-  contenedor: { flex: 1, backgroundColor: '#FAFAFA', paddingHorizontal: 20 },
-  titulo: { fontSize: 24, fontWeight: 'bold', color: '#111827', textAlign: 'center', marginBottom: 20 },
+  contenedor: { flex: 1, backgroundColor: paleta.fondo, paddingHorizontal: 20 },
+  titulo: { fontSize: 24, fontWeight: 'bold', color: paleta.texto, textAlign: 'center', marginBottom: 20 },
   scroll: { paddingBottom: 40 },
   tarjetaPerfil: {
-    backgroundColor: '#ffffff',
+    backgroundColor: paleta.tarjeta,
     borderRadius: 24,
     padding: 24,
     alignItems: 'center',
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: '#f3f4f6',
+    borderColor: paleta.borde,
     shadowColor: '#000',
-    shadowOpacity: 0.03,
+    shadowOpacity: paleta.esOscuro ? 0.25 : 0.03,
     shadowRadius: 6,
     elevation: 2,
   },
@@ -229,19 +254,52 @@ const crearStyles = (paleta: ReturnType<typeof obtenerPaleta>) => StyleSheet.cre
     fontWeight: 'bold',
     color: paleta.primaria,
   },
-  nombreDoctor: { fontSize: 20, fontWeight: 'bold', color: '#111827' },
-  especialidadDoctor: { fontSize: 13, color: '#6b7280', marginTop: 4 },
-  correoDoctor: { fontSize: 12, color: '#9ca3af', marginTop: 2 },
+  nombreDoctor: { fontSize: 20, fontWeight: 'bold', color: paleta.texto },
+  especialidadDoctor: { fontSize: 13, color: paleta.textoSecundario, marginTop: 4 },
+  correoDoctor: { fontSize: 12, color: paleta.textoSecundario, marginTop: 2 },
+
+  seccionAspecto: {
+    marginBottom: 20,
+  },
+  etiquetaSeccion: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: paleta.textoSecundario,
+    marginBottom: 8,
+    paddingHorizontal: 4,
+    letterSpacing: 0.8,
+  },
+  tarjetaAspecto: {
+    backgroundColor: paleta.tarjeta,
+    borderRadius: 20,
+    paddingVertical: 18,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: paleta.borde,
+    shadowColor: '#000',
+    shadowOpacity: paleta.esOscuro ? 0.2 : 0.02,
+    shadowRadius: 5,
+    elevation: 1,
+  },
+  filaAspecto: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  infoAspecto: { flexDirection: 'row', alignItems: 'center', flex: 1, gap: 12 },
+  textosAspecto: { flex: 1 },
+  nombreModo: { fontSize: 14, fontWeight: '700', color: paleta.texto },
+  descripcionModo: { fontSize: 12, color: paleta.textoSecundario, marginTop: 3 },
 
   menuOpciones: {
-    backgroundColor: '#ffffff',
+    backgroundColor: paleta.tarjeta,
     borderRadius: 20,
     paddingHorizontal: 18,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: '#f3f4f6',
+    borderColor: paleta.borde,
     shadowColor: '#000',
-    shadowOpacity: 0.02,
+    shadowOpacity: paleta.esOscuro ? 0.2 : 0.02,
     shadowRadius: 5,
     elevation: 1,
   },
@@ -251,14 +309,14 @@ const crearStyles = (paleta: ReturnType<typeof obtenerPaleta>) => StyleSheet.cre
     justifyContent: 'space-between',
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f9fafb',
+    borderBottomColor: paleta.borde,
   },
   opcionItemUltima: {
     borderBottomWidth: 0,
   },
   filaOpcion: { flexDirection: 'row', alignItems: 'center' },
   iconoOpcion: { marginRight: 14 },
-  textoOpcion: { fontSize: 14, color: '#374151', fontWeight: '500' },
+  textoOpcion: { fontSize: 14, color: paleta.texto, fontWeight: '500' },
 
   botonCerrarSesion: {
     flexDirection: 'row',
@@ -281,48 +339,50 @@ const crearStyles = (paleta: ReturnType<typeof obtenerPaleta>) => StyleSheet.cre
 
   modalFondo: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.65)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
   },
   modalTarjeta: {
-    backgroundColor: '#ffffff',
+    backgroundColor: paleta.tarjeta,
     borderRadius: 20,
     padding: 22,
     width: '100%',
     maxWidth: 340,
+    borderWidth: 1,
+    borderColor: paleta.borde,
     shadowColor: '#000',
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.25,
     shadowRadius: 10,
     elevation: 5,
   },
   modalTitulo: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#111827',
+    color: paleta.texto,
     marginBottom: 4,
   },
   modalEncabezado: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   modalSubtitulo: {
     fontSize: 13,
-    color: '#6b7280',
+    color: paleta.textoSecundario,
     marginBottom: 14,
   },
   labelModal: {
     fontSize: 12,
     fontWeight: 'bold',
-    color: '#4b5563',
+    color: paleta.texto,
     marginBottom: 4,
   },
   inputModal: {
-    backgroundColor: '#f9fafb',
+    backgroundColor: paleta.inputFondo,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: paleta.inputBorde,
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    color: '#111827',
+    color: paleta.texto,
     fontSize: 14,
     marginBottom: 14,
   },
@@ -338,7 +398,7 @@ const crearStyles = (paleta: ReturnType<typeof obtenerPaleta>) => StyleSheet.cre
     borderRadius: 10,
   },
   textoModalCancelar: {
-    color: '#6b7280',
+    color: paleta.textoSecundario,
     fontWeight: '600',
   },
   botonModalGuardar: {

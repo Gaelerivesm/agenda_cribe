@@ -1,11 +1,12 @@
 import React from 'react';
-import { Svg, Path } from 'react-native-svg'; 
+import { Svg, Path } from 'react-native-svg';
+
 interface Props {
   tamano?: number;
   color?: string;
 }
 
-export default function LogoPsicologia({ tamano = 72, color = "#B80065" }: Props) {
+export default function LogoPsicologia({ tamano = 72, color = '#79528F' }: Props) {
   return (
     <Svg width={tamano} height={tamano} viewBox="0 0 100 100">
       <Path

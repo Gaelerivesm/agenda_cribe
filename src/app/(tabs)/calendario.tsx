@@ -1,1 +1,1 @@
-export { default } from '../../../PantallaCalendario';
+export { default } from '../../screens/PantallaCalendario';

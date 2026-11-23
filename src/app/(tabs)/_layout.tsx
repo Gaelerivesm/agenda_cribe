@@ -1,9 +1,10 @@
-import React from 'react';
-import { Tabs } from 'expo-router';
+import React, { useMemo } from 'react';
+import { PanResponder, View } from 'react-native';
+import { router, Tabs, useSegments } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAuth } from '../../../AuthContext';
-import { obtenerPaleta } from '../../../tema';
+import { useAuth } from '../../context/AuthContext';
+import { obtenerPaleta } from '../../theme/tema';
 
 const ICONOS = {
   index: 'home',
@@ -13,19 +14,35 @@ const ICONOS = {
   perfil: 'person',
 } as const;
 
+const RUTAS_TABS = ['/(tabs)', '/(tabs)/calendario', '/(tabs)/pacientes', '/(tabs)/notificaciones', '/(tabs)/perfil'] as const;
+const NOMBRES_TABS = ['index', 'calendario', 'pacientes', 'notificaciones', 'perfil'] as const;
+
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
   const { usuarioActual } = useAuth();
-  const paleta = obtenerPaleta(usuarioActual?.paleta);
+  const segmentos = useSegments();
+  const paleta = obtenerPaleta(usuarioActual?.paleta, usuarioActual?.modoOscuro);
+  const responderDeslizamiento = useMemo(() => PanResponder.create({
+    onMoveShouldSetPanResponder: (_, gesto) =>
+      Math.abs(gesto.dx) > 35 && Math.abs(gesto.dx) > Math.abs(gesto.dy) * 1.5,
+    onPanResponderRelease: (_, gesto) => {
+      const rutaActual = segmentos[segmentos.length - 1] ?? 'index';
+      const indiceActual = NOMBRES_TABS.indexOf(rutaActual as (typeof NOMBRES_TABS)[number]);
+      if (indiceActual < 0 || Math.abs(gesto.dx) < 60) return;
+      const siguiente = indiceActual + (gesto.dx < 0 ? 1 : -1);
+      if (siguiente >= 0 && siguiente < RUTAS_TABS.length) router.navigate(RUTAS_TABS[siguiente]);
+    },
+  }), [segmentos]);
   return (
-    <Tabs
-      screenOptions={({ route }) => ({
+    <View style={{ flex: 1 }} {...responderDeslizamiento.panHandlers}>
+      <Tabs
+        screenOptions={({ route }) => ({
         headerShown: false,
         tabBarActiveTintColor: paleta.primaria,
-        tabBarInactiveTintColor: '#9ca3af',
+        tabBarInactiveTintColor: paleta.esOscuro ? '#71717A' : '#9ca3af',
         tabBarStyle: {
-          backgroundColor: '#ffffff',
-          borderTopColor: '#f3f4f6',
+          backgroundColor: paleta.tarjeta,
+          borderTopColor: paleta.borde,
           borderTopWidth: 1,
           height: 64 + insets.bottom,
           paddingBottom: Math.max(8, insets.bottom),
@@ -37,12 +54,13 @@ export default function TabLayout() {
           return <Ionicons name={focused ? icon as keyof typeof Ionicons.glyphMap : `${icon}-outline` as keyof typeof Ionicons.glyphMap} size={size} color={String(color)} />;
         },
       })}
-    >
-      <Tabs.Screen name="index" options={{ title: 'Inicio' }} />
-      <Tabs.Screen name="calendario" options={{ title: 'Calendario' }} />
-      <Tabs.Screen name="pacientes" options={{ title: 'Pacientes' }} />
-      <Tabs.Screen name="notificaciones" options={{ title: 'Notificaciones' }} />
-      <Tabs.Screen name="perfil" options={{ title: 'Perfil' }} />
-    </Tabs>
+      >
+        <Tabs.Screen name="index" options={{ title: 'Inicio' }} />
+        <Tabs.Screen name="calendario" options={{ title: 'Calendario' }} />
+        <Tabs.Screen name="pacientes" options={{ title: 'Pacientes' }} />
+        <Tabs.Screen name="notificaciones" options={{ title: 'Notificaciones' }} />
+        <Tabs.Screen name="perfil" options={{ title: 'Perfil' }} />
+      </Tabs>
+    </View>
   );
 }

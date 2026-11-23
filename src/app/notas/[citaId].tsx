@@ -1,1 +1,1 @@
-export { default } from '../../../PantallaNotasSesion';
+export { default } from '../../screens/PantallaNotasSesion';

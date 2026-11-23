@@ -1,1 +1,1 @@
-export { default } from '../../../PantallaInicio';
+export { default } from '../../screens/PantallaInicio';

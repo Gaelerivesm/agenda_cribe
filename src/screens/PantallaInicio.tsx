@@ -3,20 +3,19 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl } 
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAuth } from './AuthContext';
-import { CitasContext, Cita, formatearFecha } from './CitasContext';
-import { PacientesContext } from './PacientesContext';
-import { diasParaCumple, edadQueCumple } from './PacientesContext';
-import AgendarCitaModal from './AgendarCitaModal';
-import { obtenerPaleta } from './tema';
-import { iniciales, fechaLarga, fechaCorta } from './utilidades';
+import { useAuth } from '../context/AuthContext';
+import { CitasContext, Cita, formatearFecha } from '../context/CitasContext';
+import { PacientesContext, diasParaCumple, edadQueCumple } from '../context/PacientesContext';
+import AgendarCitaModal from '../components/AgendarCitaModal';
+import { obtenerPaleta } from '../theme/tema';
+import { iniciales, fechaLarga, fechaCorta } from '../utils/utilidades';
 
 const DIAS_SEMANA = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
 export default function PantallaInicio() {
   const insets = useSafeAreaInsets();
   const { usuarioActual } = useAuth();
-  const paleta = obtenerPaleta(usuarioActual?.paleta);
+  const paleta = obtenerPaleta(usuarioActual?.paleta, usuarioActual?.modoOscuro);
   const styles = useMemo(() => crearStyles(paleta), [paleta]);
 
   const context = useContext(CitasContext);
@@ -147,44 +146,62 @@ export default function PantallaInicio() {
           </TouchableOpacity>
         ) : (
           <View style={styles.tarjetaVacia}>
-            <Ionicons name="calendar-outline" size={28} color="#9ca3af" />
-            <Text style={styles.textoVacio}>No tienes citas pendientes para hoy.</Text>
+            <Ionicons name="calendar-outline" size={28} color={paleta.textoSecundario} />
+            <Text style={styles.textoTarjetaVacia}>No tienes más citas programadas por ahora.</Text>
           </View>
         )}
 
-        <Text style={styles.seccionTitulo}>Cumpleaños en los próximos 30 días</Text>
+        {/* Sección: Próximos cumpleaños */}
         {cumpleanosProximos.length > 0 ? (
-          <View style={styles.tarjetaCumpleanos}>
-            {cumpleanosProximos.map(({ paciente, dias, edad }) => (
-              <TouchableOpacity
-                key={paciente.id}
-                style={styles.filaCumpleanos}
-                onPress={() => router.push({ pathname: '/paciente/[pacienteId]', params: { pacienteId: paciente.id } })}
-              >
-                <View style={styles.iconoCumpleanos}>
-                  <Ionicons name="gift-outline" size={19} color={paleta.primaria} />
-                </View>
-                <View style={styles.infoCumpleanos}>
-                  <Text style={styles.nombrePacienteCumpleanos}>{paciente.nombre}</Text>
-                  <Text style={styles.detalleCumpleanos}>{fechaCorta(paciente.fechaNacimiento)} · cumple {edad ?? ''} años</Text>
-                </View>
-                <Text style={styles.diasCumpleanos}>{dias === 0 ? 'Hoy' : dias === 1 ? 'Mañana' : `En ${dias} días`}</Text>
-              </TouchableOpacity>
-            ))}
+          <View style={styles.seccionCumpleanos}>
+            <View style={styles.filaTituloSeccion}>
+              <Text style={styles.seccionTitulo}>Próximos cumpleaños</Text>
+              <Ionicons name="gift-outline" size={18} color={paleta.primaria} />
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scrollCumpleanos}>
+              {cumpleanosProximos.map(({ paciente, dias, edad }) => {
+                const esHoy = dias === 0;
+                const textoDias = esHoy ? '¡Hoy!' : dias === 1 ? 'Mañana' : `En ${dias} días`;
+                return (
+                  <TouchableOpacity
+                    key={paciente.id}
+                    style={[styles.tarjetaCumple, esHoy && styles.tarjetaCumpleHoy]}
+                    onPress={() => router.push({ pathname: '/paciente/[pacienteId]', params: { pacienteId: paciente.id } })}
+                  >
+                    <View style={styles.filaCabeceraCumple}>
+                      <View style={[styles.avatarCumple, esHoy && styles.avatarCumpleHoy]}>
+                        <Text style={[styles.textoAvatarCumple, esHoy && styles.textoAvatarCumpleHoy]}>
+                          {iniciales(paciente.nombre)}
+                        </Text>
+                      </View>
+                      <View style={[styles.badgeDias, esHoy && styles.badgeDiasHoy]}>
+                        <Text style={[styles.textoBadgeDias, esHoy && styles.textoBadgeDiasHoy]}>{textoDias}</Text>
+                      </View>
+                    </View>
+                    <Text style={styles.nombreCumple} numberOfLines={1}>{paciente.nombre}</Text>
+                    <Text style={styles.detalleCumple}>
+                      {fechaCorta(paciente.fechaNacimiento)}
+                      {edad !== null ? ` · Cumple ${edad}` : ''}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
           </View>
-        ) : (
-          <View style={styles.tarjetaVacia}>
-            <Ionicons name="gift-outline" size={25} color="#9ca3af" />
-            <Text style={styles.textoVacio}>No hay cumpleaños durante los próximos 30 días.</Text>
-          </View>
-        )}
+        ) : null}
+
       </ScrollView>
 
-      {/* Botón Flotante FAB en Magenta */}
-      <TouchableOpacity style={[styles.botonFlotante, { backgroundColor: paleta.primaria }]} onPress={abrirNuevaCita} accessibilityLabel="Agendar una cita">
+      {/* Botón Flotante FAB */}
+      <TouchableOpacity
+        style={[styles.botonFlotante, { backgroundColor: paleta.primaria }]}
+        onPress={abrirNuevaCita}
+        accessibilityLabel="Agendar una cita"
+      >
         <Ionicons name="add" size={32} color="#ffffff" />
       </TouchableOpacity>
 
+      {/* Modal para agendar cita rápida */}
       <AgendarCitaModal
         visible={modalNuevaCita}
         fechaInicial={hoyStr}
@@ -197,7 +214,7 @@ export default function PantallaInicio() {
 const crearStyles = (paleta: ReturnType<typeof obtenerPaleta>) => StyleSheet.create({
   contenedor: {
     flex: 1,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: paleta.fondo,
   },
   scrollPrincipal: {
     paddingHorizontal: 20,
@@ -208,66 +225,69 @@ const crearStyles = (paleta: ReturnType<typeof obtenerPaleta>) => StyleSheet.cre
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 20,
-    marginTop: 4,
+    marginTop: 6,
   },
   infoSaludo: {
     flex: 1,
-    paddingRight: 12,
   },
   saludo: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#111827',
+    fontSize: 22,
+    fontWeight: '800',
+    color: paleta.texto,
   },
   subtituloFecha: {
-    fontSize: 13,
-    color: '#6b7280',
-    marginTop: 3,
+    fontSize: 14,
+    color: paleta.textoSecundario,
+    marginTop: 2,
+    textTransform: 'capitalize',
   },
   avatarBoton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: paleta.suave,
-    justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: paleta.borde,
-  },
-  avatarTexto: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: paleta.primaria,
-  },
-  tarjetaResumenHoy: {
-    backgroundColor: paleta.suave,
-    borderRadius: 20,
-    padding: 18,
-    marginBottom: 24,
+    justifyContent: 'center',
     borderWidth: 1,
     borderColor: paleta.borde,
   },
+  avatarTexto: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: paleta.primaria,
+  },
+  tarjetaResumenHoy: {
+    backgroundColor: paleta.primaria,
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 24,
+    shadowColor: paleta.primaria,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 4,
+  },
   tituloResumen: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#111827',
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#FFFFFF',
   },
   fraseResumen: {
     fontSize: 13,
-    color: '#6b7280',
+    color: 'rgba(255, 255, 255, 0.85)',
     marginTop: 4,
-    marginBottom: 14,
+    marginBottom: 16,
   },
   barraProgresoFondo: {
     height: 6,
-    backgroundColor: paleta.borde,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
     borderRadius: 3,
     overflow: 'hidden',
-    marginBottom: 8,
+    marginBottom: 10,
   },
   barraProgresoRelleno: {
     height: '100%',
-    backgroundColor: paleta.primaria,
+    backgroundColor: paleta.tarjeta,
     borderRadius: 3,
   },
   filaMetricasProgreso: {
@@ -276,39 +296,40 @@ const crearStyles = (paleta: ReturnType<typeof obtenerPaleta>) => StyleSheet.cre
   },
   textoMetricaProgreso: {
     fontSize: 12,
-    color: '#6b7280',
-    fontWeight: '500',
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
   seccionTitulo: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#111827',
+    fontSize: 17,
+    fontWeight: '700',
+    color: paleta.texto,
     marginBottom: 12,
   },
   tarjetaProximaCita: {
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
+    backgroundColor: paleta.tarjeta,
+    borderRadius: 16,
     padding: 16,
-    marginBottom: 24,
     borderWidth: 1,
-    borderColor: '#f3f4f6',
+    borderColor: paleta.inputBorde,
+    marginBottom: 24,
     shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
-    shadowRadius: 8,
+    shadowRadius: 6,
     elevation: 2,
   },
   filaCabeceraCita: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 14,
   },
   circuloReloj: {
     width: 40,
     height: 40,
     borderRadius: 20,
     backgroundColor: paleta.suave,
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
     marginRight: 12,
   },
   infoPacienteCita: {
@@ -316,115 +337,135 @@ const crearStyles = (paleta: ReturnType<typeof obtenerPaleta>) => StyleSheet.cre
   },
   nombrePacienteCita: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#111827',
+    fontWeight: '700',
+    color: paleta.texto,
   },
   tipoCita: {
     fontSize: 13,
-    color: '#6b7280',
+    color: paleta.textoSecundario,
     marginTop: 2,
   },
   filaPieCita: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: '#f9fafb',
+    borderTopColor: paleta.inputBorde,
+    paddingTop: 12,
   },
   horaTextoCita: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
+    fontSize: 15,
+    fontWeight: '700',
+    color: paleta.texto,
   },
   badgeConfirmada: {
     backgroundColor: paleta.suave,
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 10,
+    borderRadius: 8,
   },
   textoBadgeConfirmada: {
     fontSize: 12,
-    fontWeight: 'bold',
+    fontWeight: '600',
     color: paleta.primaria,
   },
   tarjetaVacia: {
-    backgroundColor: '#ffffff',
-    borderRadius: 18,
+    backgroundColor: paleta.tarjeta,
+    borderRadius: 16,
     padding: 24,
     alignItems: 'center',
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: '#f3f4f6',
-  },
-  tarjetaCumpleanos: {
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: '#f3f4f6',
-  },
-  filaCumpleanos: {
-    minHeight: 70,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f9fafb',
-  },
-  iconoCumpleanos: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: paleta.suave,
     justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
+    borderWidth: 1,
+    borderColor: paleta.inputBorde,
+    borderStyle: 'dashed',
+    marginBottom: 24,
   },
-  infoCumpleanos: { flex: 1 },
-  nombrePacienteCumpleanos: { color: '#111827', fontSize: 14, fontWeight: '700' },
-  detalleCumpleanos: { color: '#6b7280', fontSize: 11, marginTop: 4 },
-  diasCumpleanos: { color: paleta.primaria, fontSize: 11, fontWeight: '700', marginLeft: 6 },
-  textoVacio: {
-    fontSize: 14,
-    color: '#9ca3af',
+  textoTarjetaVacia: {
+    fontSize: 13,
+    color: paleta.textoSecundario,
     marginTop: 8,
+    textAlign: 'center',
   },
-  gridAcciones: {
+  seccionCumpleanos: {
+    marginBottom: 24,
+  },
+  filaTituloSeccion: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  scrollCumpleanos: {
+    paddingVertical: 4,
     gap: 12,
   },
-  botonAccionGrid: {
-    width: '48%',
-    backgroundColor: '#ffffff',
-    borderRadius: 18,
-    paddingVertical: 18,
-    paddingHorizontal: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
+  tarjetaCumple: {
+    backgroundColor: paleta.tarjeta,
+    borderRadius: 14,
+    padding: 12,
+    width: 170,
     borderWidth: 1,
-    borderColor: '#f3f4f6',
+    borderColor: paleta.inputBorde,
     shadowColor: '#000',
-    shadowOpacity: 0.03,
-    shadowRadius: 6,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
   },
-  iconoAccionContenedor: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+  tarjetaCumpleHoy: {
+    borderColor: paleta.primaria,
     backgroundColor: paleta.suave,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 10,
   },
-  textoAccionGrid: {
-    fontSize: 13,
+  filaCabeceraCumple: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  avatarCumple: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: paleta.inputFondo,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarCumpleHoy: {
+    backgroundColor: paleta.primaria,
+  },
+  textoAvatarCumple: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: paleta.textoSecundario,
+  },
+  textoAvatarCumpleHoy: {
+    color: '#FFFFFF',
+  },
+  badgeDias: {
+    backgroundColor: paleta.inputFondo,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  badgeDiasHoy: {
+    backgroundColor: paleta.primaria,
+  },
+  textoBadgeDias: {
+    fontSize: 11,
     fontWeight: '600',
-    color: '#374151',
-    textAlign: 'center',
+    color: paleta.textoSecundario,
+  },
+  textoBadgeDiasHoy: {
+    color: '#FFFFFF',
+  },
+  nombreCumple: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: paleta.texto,
+  },
+  detalleCumple: {
+    fontSize: 12,
+    color: paleta.textoSecundario,
+    marginTop: 2,
   },
   botonFlotante: {
     position: 'absolute',

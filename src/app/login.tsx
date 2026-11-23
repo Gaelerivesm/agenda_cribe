@@ -1,1 +1,1 @@
-export { default } from '../../PantallaLogin';
+export { default } from '../screens/PantallaLogin';

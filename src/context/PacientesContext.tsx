@@ -1,6 +1,5 @@
 import React, { createContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { formatearFecha } from './CitasContext';
 import { useAuth } from './AuthContext';
 
 export interface Paciente {
@@ -67,12 +66,9 @@ export const PacientesProvider = ({ children }: { children: ReactNode }) => {
   const [cargando, setCargando] = useState(true);
   const [usuarioDatosId, setUsuarioDatosId] = useState<string | null>(null);
 
-  const recargar = useCallback(async () => {
-    if (!usuarioId || cargandoAuth) return;
+  const cargarPacientes = useCallback(async (id: string) => {
     setCargando(true);
-    setUsuarioDatosId(null);
-    setPacientes([]);
-    const claveUsuario = `${CLAVE_ALMACENAMIENTO}:${usuarioId}`;
+    const claveUsuario = `${CLAVE_ALMACENAMIENTO}:${id}`;
     try {
       const guardado = await AsyncStorage.getItem(claveUsuario);
       if (guardado) {
@@ -84,31 +80,45 @@ export const PacientesProvider = ({ children }: { children: ReactNode }) => {
         ]);
         if (!duenoAntiguo && antiguo) {
           await AsyncStorage.setItem(claveUsuario, antiguo);
-          await AsyncStorage.setItem(CLAVE_DUENO_ANTIGUO, usuarioId);
+          await AsyncStorage.setItem(CLAVE_DUENO_ANTIGUO, id);
           setPacientes(JSON.parse(antiguo));
         } else {
           setPacientes([]);
         }
       }
-      setUsuarioDatosId(usuarioId);
+      setUsuarioDatosId(id);
     } catch (error) {
       console.log('Error al cargar pacientes', error);
       setPacientes([]);
     } finally {
       setCargando(false);
     }
-  }, [usuarioId, cargandoAuth]);
+  }, []);
+
+  const recargar = useCallback(async () => {
+    if (!usuarioId || cargandoAuth) return;
+    await cargarPacientes(usuarioId);
+  }, [usuarioId, cargandoAuth, cargarPacientes]);
 
   useEffect(() => {
+    let activo = true;
     if (cargandoAuth) return;
-    if (!usuarioId) {
-      setPacientes([]);
-      setUsuarioDatosId(null);
-      setCargando(false);
-      return;
-    }
-    void recargar();
-  }, [recargar, cargandoAuth, usuarioId]);
+    const sincronizar = async () => {
+      if (!usuarioId) {
+        await Promise.resolve();
+        if (!activo) return;
+        setPacientes([]);
+        setUsuarioDatosId(null);
+        setCargando(false);
+        return;
+      }
+      await cargarPacientes(usuarioId);
+    };
+    void sincronizar();
+    return () => {
+      activo = false;
+    };
+  }, [cargandoAuth, usuarioId, cargarPacientes]);
 
   useEffect(() => {
     if (cargando || !usuarioId || usuarioDatosId !== usuarioId) return;

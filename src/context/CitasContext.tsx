@@ -43,12 +43,9 @@ export const CitasProvider = ({ children }: { children: ReactNode }) => {
   const [cargando, setCargando] = useState(true);
   const [usuarioDatosId, setUsuarioDatosId] = useState<string | null>(null);
 
-  const recargar = useCallback(async () => {
-    if (!usuarioId || cargandoAuth) return;
+  const cargarCitas = useCallback(async (id: string) => {
     setCargando(true);
-    setUsuarioDatosId(null);
-    setCitas([]);
-    const claveUsuario = `${CLAVE_ALMACENAMIENTO}:${usuarioId}`;
+    const claveUsuario = `${CLAVE_ALMACENAMIENTO}:${id}`;
     try {
       const guardado = await AsyncStorage.getItem(claveUsuario);
       if (guardado) {
@@ -60,31 +57,45 @@ export const CitasProvider = ({ children }: { children: ReactNode }) => {
         ]);
         if (!duenoAntiguo && antiguo) {
           await AsyncStorage.setItem(claveUsuario, antiguo);
-          await AsyncStorage.setItem(CLAVE_DUENO_ANTIGUO, usuarioId);
+          await AsyncStorage.setItem(CLAVE_DUENO_ANTIGUO, id);
           setCitas(JSON.parse(antiguo));
         } else {
           setCitas([]);
         }
       }
-      setUsuarioDatosId(usuarioId);
+      setUsuarioDatosId(id);
     } catch (error) {
       console.log('Error al cargar citas', error);
       setCitas([]);
     } finally {
       setCargando(false);
     }
-  }, [usuarioId, cargandoAuth]);
+  }, []);
+
+  const recargar = useCallback(async () => {
+    if (!usuarioId || cargandoAuth) return;
+    await cargarCitas(usuarioId);
+  }, [usuarioId, cargandoAuth, cargarCitas]);
 
   useEffect(() => {
+    let activo = true;
     if (cargandoAuth) return;
-    if (!usuarioId) {
-      setCitas([]);
-      setUsuarioDatosId(null);
-      setCargando(false);
-      return;
-    }
-    void recargar();
-  }, [recargar, cargandoAuth, usuarioId]);
+    const sincronizar = async () => {
+      if (!usuarioId) {
+        await Promise.resolve();
+        if (!activo) return;
+        setCitas([]);
+        setUsuarioDatosId(null);
+        setCargando(false);
+        return;
+      }
+      await cargarCitas(usuarioId);
+    };
+    void sincronizar();
+    return () => {
+      activo = false;
+    };
+  }, [cargandoAuth, usuarioId, cargarCitas]);
 
   useEffect(() => {
     if (cargando || !usuarioId || usuarioDatosId !== usuarioId) return;

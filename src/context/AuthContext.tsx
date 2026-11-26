@@ -1,6 +1,8 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from 'react';
+import { useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Crypto from 'expo-crypto';
+import { Apariencia } from '../theme/tema';
 
 export interface Usuario {
   id: string;
@@ -12,7 +14,8 @@ export interface Usuario {
   passwordSalt: string;
   especialidad?: string;
   paleta?: string;
-  modoOscuro?: boolean;
+  apariencia?: Apariencia;
+  modoOscuro?: boolean | 'beige';
 }
 
 interface ResultadoAuth {
@@ -34,7 +37,7 @@ interface AuthContextType {
   cambiarPassword: (passwordActual: string, nuevaPassword: string) => Promise<ResultadoAuth>;
   actualizarPerfil: (nombre: string, especialidad?: string) => void;
   actualizarPaleta: (paleta: string) => void;
-  actualizarModoOscuro: (modoOscuro: boolean) => void;
+  actualizarApariencia: (apariencia: Apariencia) => void;
 }
 
 const CLAVE_CUENTAS = 'agenda_cribe_cuentas_v2';
@@ -63,9 +66,19 @@ const leerCuentas = async (): Promise<Usuario[]> => {
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const esquemaSistema = useColorScheme();
   const [cuentas, setCuentas] = useState<Usuario[]>([]);
   const [usuarioActual, setUsuarioActual] = useState<Usuario | null>(null);
   const [cargandoAuth, setCargandoAuth] = useState(true);
+
+  const usuarioVisible = useMemo(() => {
+    if (!usuarioActual) return null;
+    const apariencia = usuarioActual.apariencia ?? (usuarioActual.modoOscuro === true ? 'oscuro' : 'sistema');
+    const modoOscuro: boolean | 'beige' = apariencia === 'beige'
+      ? 'beige'
+      : apariencia === 'oscuro' || (apariencia === 'sistema' && esquemaSistema === 'dark');
+    return { ...usuarioActual, apariencia, modoOscuro };
+  }, [usuarioActual, esquemaSistema]);
 
   useEffect(() => {
     let activo = true;
@@ -172,6 +185,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       passwordHash: await hashPassword(password, passwordSalt),
       especialidad: especialidad?.trim() || 'Terapeuta / Psicólogo',
       paleta: 'rosa',
+      apariencia: 'sistema',
     };
     const nuevas = [...cuentas, nueva];
     if (!await guardarCuentas(nuevas)) return { exito: false, error: 'No se pudo guardar la cuenta en este dispositivo.' };
@@ -253,16 +267,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     void guardarCuentas(cuentas.map(c => c.id === actualizado.id ? actualizado : c));
   }, [cuentas, guardarCuentas, usuarioActual]);
 
-  const actualizarModoOscuro = useCallback((modoOscuro: boolean) => {
+  const actualizarApariencia = useCallback((apariencia: Apariencia) => {
     if (!usuarioActual) return;
-    const actualizado = { ...usuarioActual, modoOscuro };
+    const actualizado = { ...usuarioActual, apariencia };
     setUsuarioActual(actualizado);
     void guardarCuentas(cuentas.map(c => c.id === actualizado.id ? actualizado : c));
   }, [cuentas, guardarCuentas, usuarioActual]);
 
   const valor = useMemo(() => ({
-    usuarioActual,
-    estaAutenticado: usuarioActual !== null,
+    usuarioActual: usuarioVisible,
+    estaAutenticado: usuarioVisible !== null,
     cargandoAuth,
     iniciarSesion,
     registrarse,
@@ -272,8 +286,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     cambiarPassword,
     actualizarPerfil,
     actualizarPaleta,
-    actualizarModoOscuro,
-  }), [usuarioActual, cargandoAuth, iniciarSesion, registrarse, cerrarSesion, generarCodigoRecuperacion, restablecerPassword, cambiarPassword, actualizarPerfil, actualizarPaleta, actualizarModoOscuro]);
+    actualizarApariencia,
+  }), [usuarioVisible, cargandoAuth, iniciarSesion, registrarse, cerrarSesion, generarCodigoRecuperacion, restablecerPassword, cambiarPassword, actualizarPerfil, actualizarPaleta, actualizarApariencia]);
 
   return <AuthContext.Provider value={valor}>{children}</AuthContext.Provider>;
 };

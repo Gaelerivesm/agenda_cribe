@@ -8,6 +8,7 @@ export interface Paciente {
   fechaNacimiento: string;
   telefono: string;
   correo: string;
+  pronombres?: string;
 }
 
 export type DatosPaciente = Omit<Paciente, 'id'>;

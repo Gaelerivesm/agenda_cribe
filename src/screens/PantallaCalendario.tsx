@@ -5,8 +5,12 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CitasContext, Cita, formatearFecha } from '../context/CitasContext';
 import AgendarCitaModal from '../components/AgendarCitaModal';
+import FormularioPaciente from '../components/Formulariopaciente';
+import BotonAccionesRapidas from '../components/BotonAccionesRapidas';
+import { PacientesContext } from '../context/PacientesContext';
 import { obtenerPaleta } from '../theme/tema';
 import { useAuth } from '../context/AuthContext';
+import { obtenerEstadoCita } from '../utils/citas';
 
 type Vista = 'Semana' | 'Mes' | 'Año';
 type TipoAnimacion = 'izquierda' | 'derecha';
@@ -94,14 +98,24 @@ export default function PantallaCalendario() {
   const context = useContext(CitasContext);
   if (!context) throw new Error('CitasContext no está disponible');
   const { citas } = context;
+  const pacientesContext = useContext(PacientesContext);
+  if (!pacientesContext) throw new Error('PacientesContext no está disponible');
+  const { agregarPaciente } = pacientesContext;
 
-  const hoy = new Date();
+  const [ahora, setAhora] = useState(() => new Date());
+  useEffect(() => {
+    const intervalo = setInterval(() => setAhora(new Date()), 30_000);
+    return () => clearInterval(intervalo);
+  }, []);
+
+  const hoy = ahora;
   const hoyStr = formatearFecha(hoy);
 
   const [fechaActiva, setFechaActiva] = useState<Date>(hoy);
   const [vistaActiva, setVistaActiva] = useState<Vista>('Semana');
 
   const [modalVisible, setModalVisible] = useState(false);
+  const [modalPacienteVisible, setModalPacienteVisible] = useState(false);
   const [citaEditando, setCitaEditando] = useState<Cita | null>(null);
   const [pacienteInicialModal, setPacienteInicialModal] = useState<string | undefined>(undefined);
 
@@ -283,9 +297,15 @@ export default function PantallaCalendario() {
                           <View style={styles.infoCitaTimeline}>
                             <View style={styles.filaBadgeHora}>
                               <Text style={styles.horaExactaCita}>{cita.hora} hrs</Text>
-                              <View style={styles.badgeEnCurso}>
-                                <Text style={styles.textoBadgeEnCurso}>
-                                  {cita.confirmada ? 'Confirmada' : 'En curso'}
+                              <View style={styles.badgeEstado}>
+                                <Text style={[styles.textoBadgeEstado, {
+                                  color: obtenerEstadoCita(cita.fecha, cita.hora, ahora) === 'En curso'
+                                    ? '#047857'
+                                    : obtenerEstadoCita(cita.fecha, cita.hora, ahora) === 'Cita pasada'
+                                    ? paleta.textoSecundario
+                                    : '#B45309',
+                                }]}>
+                                  {obtenerEstadoCita(cita.fecha, cita.hora, ahora)}
                                 </Text>
                               </View>
                             </View>
@@ -453,9 +473,7 @@ export default function PantallaCalendario() {
       </Animated.View>
 
       {/* FAB Magenta */}
-      <TouchableOpacity style={styles.botonFlotante} onPress={() => abrirModalNueva()}>
-        <Ionicons name="add" size={32} color="#ffffff" />
-      </TouchableOpacity>
+      <BotonAccionesRapidas paleta={paleta} style={styles.botonFlotante} onPress={() => abrirModalNueva()} onAgregarCita={() => abrirModalNueva()} onAgregarPaciente={() => setModalPacienteVisible(true)} />
 
       <AgendarCitaModal
         visible={modalVisible}
@@ -468,6 +486,7 @@ export default function PantallaCalendario() {
           if (seleccionada) setFechaActiva(seleccionada);
         }}
       />
+      <FormularioPaciente visible={modalPacienteVisible} onCerrar={() => setModalPacienteVisible(false)} onGuardar={datos => { agregarPaciente(datos); setModalPacienteVisible(false); }} />
     </View>
   );
 }
@@ -663,13 +682,13 @@ const crearStyles = (paleta: ReturnType<typeof obtenerPaleta>) => StyleSheet.cre
     color: paleta.primaria,
     fontWeight: 'bold',
   },
-  badgeEnCurso: {
-    backgroundColor: paleta.tarjeta,
+  badgeEstado: {
+    backgroundColor: paleta.suave,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 8,
   },
-  textoBadgeEnCurso: {
+  textoBadgeEstado: {
     fontSize: 11,
     fontWeight: 'bold',
     color: paleta.primaria,

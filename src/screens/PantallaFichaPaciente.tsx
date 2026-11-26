@@ -130,6 +130,7 @@ export default function PantallaFichaPaciente() {
             <Text style={styles.textoAvatar}>{iniciales(paciente.nombre)}</Text>
           </View>
           <Text style={styles.nombre}>{paciente.nombre}</Text>
+          {paciente.pronombres?.trim() ? <Text style={styles.edad}>{paciente.pronombres}</Text> : null}
           {edad !== null ? <Text style={styles.edad}>{edad} años</Text> : null}
 
           {diasCumple !== null ? (

@@ -28,6 +28,7 @@ interface ContenidoProps {
 
 function FormularioContenido({ paciente, onCerrar, onGuardar, paleta, styles }: ContenidoProps) {
   const [nombre, setNombre] = useState(paciente?.nombre ?? '');
+  const [pronombres, setPronombres] = useState(paciente?.pronombres ?? '');
   const [fechaNacimiento, setFechaNacimiento] = useState(paciente?.fechaNacimiento ?? '');
   const [telefono, setTelefono] = useState(paciente?.telefono ?? '');
   const [correo, setCorreo] = useState(paciente?.correo ?? '');
@@ -60,6 +61,7 @@ function FormularioContenido({ paciente, onCerrar, onGuardar, paleta, styles }: 
     }
     onGuardar({
       nombre: nombre.trim(),
+      pronombres: pronombres.trim(),
       fechaNacimiento,
       telefono: telefono.trim(),
       correo: correo.trim(),
@@ -78,6 +80,9 @@ function FormularioContenido({ paciente, onCerrar, onGuardar, paleta, styles }: 
           </View>
           <Text style={styles.label}>Nombre completo</Text>
           <TextInput style={styles.input} value={nombre} onChangeText={setNombre} placeholder="Nombre del paciente" />
+
+          <Text style={styles.label}>Pronombres (opcional)</Text>
+          <TextInput style={styles.input} value={pronombres} onChangeText={setPronombres} placeholder="Ej. ella, él, elle" />
 
           <Text style={styles.label}>Fecha de nacimiento</Text>
           <View style={styles.filaFecha}>

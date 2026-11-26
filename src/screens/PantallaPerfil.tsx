@@ -1,13 +1,17 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, Modal, TextInput, ScrollView, Pressable, KeyboardAvoidingView, Platform, Switch } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Modal, TextInput, ScrollView, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import { iniciales } from '../utils/utilidades';
 import ModalCambioPassword from '../components/ModalCambioPassword';
 import ModalPaletas from '../components/ModalPaletas';
-import { obtenerPaleta } from '../theme/tema';
+import { obtenerPaleta, Apariencia } from '../theme/tema';
+import SelectorEspecialidad from '../components/SelectorEspecialidad';
 import { router } from 'expo-router';
+import { CitasContext } from '../context/CitasContext';
+import { PacientesContext } from '../context/PacientesContext';
+import { solicitarPermisoNotificaciones, sincronizarNotificaciones } from '../services/notificaciones';
 
 interface PantallaPerfilProps {
   onCerrarSesion?: () => void;
@@ -15,7 +19,9 @@ interface PantallaPerfilProps {
 
 export default function PantallaPerfil({ onCerrarSesion }: PantallaPerfilProps) {
   const insets = useSafeAreaInsets();
-  const { usuarioActual, cerrarSesion, actualizarPerfil, actualizarModoOscuro } = useAuth();
+  const citas = React.useContext(CitasContext);
+  const pacientes = React.useContext(PacientesContext);
+  const { usuarioActual, cerrarSesion, actualizarPerfil, actualizarApariencia } = useAuth();
 
   const [modalEditarVisible, setModalEditarVisible] = useState(false);
   const [modalPasswordVisible, setModalPasswordVisible] = useState(false);
@@ -55,9 +61,24 @@ export default function PantallaPerfil({ onCerrarSesion }: PantallaPerfilProps) 
     Alert.alert('Éxito', 'Información de perfil actualizada correctamente.');
   };
 
+  const configurarNotificaciones = async () => {
+    try {
+      const permitido = await solicitarPermisoNotificaciones();
+      if (!permitido) {
+        Alert.alert('Permiso necesario', 'Activa las notificaciones de Agenda Cribe en los ajustes del teléfono para recibir recordatorios.');
+        return;
+      }
+      if (citas && pacientes) await sincronizarNotificaciones(citas.citas, pacientes.pacientes);
+      Alert.alert('Recordatorios activados', 'Recibirás avisos 24 horas y 1 hora antes de tus citas, y un día antes de los cumpleaños.');
+    } catch {
+      Alert.alert('No se pudo activar', 'Revisa los permisos de notificaciones en los ajustes del teléfono.');
+    }
+  };
+
   const inicialesDoc = usuarioActual?.nombre ? iniciales(usuarioActual.nombre) : 'DR';
-  const esOscuro = Boolean(usuarioActual?.modoOscuro);
-  const paleta = obtenerPaleta(usuarioActual?.paleta, esOscuro);
+  const apariencia = usuarioActual?.apariencia ?? 'sistema';
+  const esOscuro = usuarioActual?.modoOscuro === true;
+  const paleta = obtenerPaleta(usuarioActual?.paleta, usuarioActual?.modoOscuro);
   const styles = useMemo(() => crearStyles(paleta), [paleta]);
 
   return (
@@ -75,26 +96,27 @@ export default function PantallaPerfil({ onCerrarSesion }: PantallaPerfilProps) 
           {usuarioActual?.correo ? <Text style={styles.correoDoctor}>{usuarioActual.correo}</Text> : null}
         </View>
 
-        {/* Switch global de aspecto */}
+        {/* Selector de aspecto */}
         <View style={styles.seccionAspecto}>
           <Text style={styles.etiquetaSeccion}>ASPECTO</Text>
           <View style={styles.tarjetaAspecto}>
             <View style={styles.filaAspecto}>
               <View style={styles.infoAspecto}>
-                <Ionicons name={esOscuro ? 'moon-outline' : 'sunny-outline'} size={21} color={paleta.primaria} />
+              <Ionicons name={apariencia === 'sistema' ? 'phone-portrait-outline' : apariencia === 'beige' ? 'contrast-outline' : esOscuro ? 'moon-outline' : 'sunny-outline'} size={21} color={paleta.primaria} />
                 <View style={styles.textosAspecto}>
-                  <Text style={styles.nombreModo}>{esOscuro ? 'Modo oscuro' : 'Modo claro'}</Text>
-                  <Text style={styles.descripcionModo}>Aplica el aspecto a toda la aplicación</Text>
+                  <Text style={styles.nombreModo}>{apariencia === 'sistema' ? 'Apariencia del sistema' : apariencia === 'beige' ? 'Tema beige' : esOscuro ? 'Tema oscuro' : 'Tema claro'}</Text>
+                  <Text style={styles.descripcionModo}>Se adapta al teléfono o elige un tema fijo</Text>
                 </View>
               </View>
-              <Switch
-                value={esOscuro}
-                onValueChange={actualizarModoOscuro}
-                trackColor={{ false: paleta.inputBorde, true: paleta.primaria }}
-                thumbColor="#FFFFFF"
-                ios_backgroundColor={paleta.inputBorde}
-                accessibilityLabel="Activar modo oscuro"
-              />
+            </View>
+            <View style={styles.opcionesApariencia}>
+              {([
+                ['sistema', 'Sistema'], ['claro', 'Blanco'], ['oscuro', 'Negro'], ['beige', 'Beige'],
+              ] as [Apariencia, string][]).map(([valor, etiqueta]) => (
+                <TouchableOpacity key={valor} style={[styles.botonApariencia, apariencia === valor && styles.aparienciaActiva]} onPress={() => actualizarApariencia(valor)}>
+                  <Text style={[styles.textoApariencia, apariencia === valor && styles.textoAparienciaActiva]}>{etiqueta}</Text>
+                </TouchableOpacity>
+              ))}
             </View>
           </View>
         </View>
@@ -126,9 +148,7 @@ export default function PantallaPerfil({ onCerrarSesion }: PantallaPerfilProps) 
 
           <TouchableOpacity
             style={styles.opcionItem}
-            onPress={() =>
-              Alert.alert('Notificaciones', 'Las notificaciones automáticas y recordatorios están activas.')
-            }
+            onPress={() => { void configurarNotificaciones(); }}
           >
             <View style={styles.filaOpcion}>
               <Ionicons name="notifications-outline" size={20} color={paleta.textoSecundario} style={styles.iconoOpcion} />
@@ -192,12 +212,7 @@ export default function PantallaPerfil({ onCerrarSesion }: PantallaPerfilProps) 
                 />
 
                 <Text style={styles.labelModal}>Especialidad:</Text>
-                <TextInput
-                  style={styles.inputModal}
-                  value={nuevaEspecialidad}
-                  onChangeText={setNuevaEspecialidad}
-                  placeholder="Ej. Terapeuta / Psicólogo"
-                />
+                <SelectorEspecialidad value={nuevaEspecialidad} onChange={setNuevaEspecialidad} paleta={paleta} />
 
                 <View style={styles.filaModalBotones}>
                   <TouchableOpacity
@@ -286,6 +301,11 @@ const crearStyles = (paleta: ReturnType<typeof obtenerPaleta>) => StyleSheet.cre
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  opcionesApariencia: { flexDirection: 'row', gap: 6, marginTop: 16 },
+  botonApariencia: { flex: 1, alignItems: 'center', paddingVertical: 9, borderRadius: 10, backgroundColor: paleta.inputFondo, borderWidth: 1, borderColor: paleta.inputBorde },
+  aparienciaActiva: { backgroundColor: paleta.primaria, borderColor: paleta.primaria },
+  textoApariencia: { color: paleta.textoSecundario, fontSize: 11, fontWeight: '600' },
+  textoAparienciaActiva: { color: '#fff' },
   infoAspecto: { flexDirection: 'row', alignItems: 'center', flex: 1, gap: 12 },
   textosAspecto: { flex: 1 },
   nombreModo: { fontSize: 14, fontWeight: '700', color: paleta.texto },

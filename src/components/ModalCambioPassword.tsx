@@ -1,6 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as ScreenCapture from 'expo-screen-capture';
 import { useAuth, validarPassword } from '../context/AuthContext';
 import { obtenerPaleta } from '../theme/tema';
 
@@ -13,6 +14,16 @@ export default function ModalCambioPassword({ visible, onCerrar }: Props) {
   const [actual, setActual] = useState('');
   const [nueva, setNueva] = useState('');
   const [confirmacion, setConfirmacion] = useState('');
+
+  useEffect(() => {
+    if (!visible) return;
+    void ScreenCapture.preventScreenCaptureAsync('cambio-password');
+    if (Platform.OS === 'ios') void ScreenCapture.enableAppSwitcherProtectionAsync(0.8);
+    return () => {
+      void ScreenCapture.allowScreenCaptureAsync('cambio-password');
+      if (Platform.OS === 'ios') void ScreenCapture.disableAppSwitcherProtectionAsync();
+    };
+  }, [visible]);
 
   const cerrar = () => {
     setActual(''); setNueva(''); setConfirmacion(''); onCerrar();

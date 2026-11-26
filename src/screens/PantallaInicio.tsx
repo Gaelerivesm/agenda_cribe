@@ -7,6 +7,8 @@ import { useAuth } from '../context/AuthContext';
 import { CitasContext, Cita, formatearFecha } from '../context/CitasContext';
 import { PacientesContext, diasParaCumple, edadQueCumple } from '../context/PacientesContext';
 import AgendarCitaModal from '../components/AgendarCitaModal';
+import FormularioPaciente from '../components/Formulariopaciente';
+import BotonAccionesRapidas from '../components/BotonAccionesRapidas';
 import { obtenerPaleta } from '../theme/tema';
 import { iniciales, fechaLarga, fechaCorta } from '../utils/utilidades';
 
@@ -24,10 +26,11 @@ export default function PantallaInicio() {
 
   const pacientesContext = useContext(PacientesContext);
   if (!pacientesContext) throw new Error('PacientesContext no está disponible');
-  const { pacientes, recargar: recargarPacientes } = pacientesContext;
+  const { pacientes, agregarPaciente, recargar: recargarPacientes } = pacientesContext;
 
   const [refrescando, setRefrescando] = useState(false);
   const [modalNuevaCita, setModalNuevaCita] = useState(false);
+  const [modalNuevoPaciente, setModalNuevoPaciente] = useState(false);
 
   const alRefrescar = async () => {
     setRefrescando(true);
@@ -193,13 +196,7 @@ export default function PantallaInicio() {
       </ScrollView>
 
       {/* Botón Flotante FAB */}
-      <TouchableOpacity
-        style={[styles.botonFlotante, { backgroundColor: paleta.primaria }]}
-        onPress={abrirNuevaCita}
-        accessibilityLabel="Agendar una cita"
-      >
-        <Ionicons name="add" size={32} color="#ffffff" />
-      </TouchableOpacity>
+      <BotonAccionesRapidas paleta={paleta} style={[styles.botonFlotante, { backgroundColor: paleta.primaria }]} onPress={abrirNuevaCita} onAgregarCita={abrirNuevaCita} onAgregarPaciente={() => setModalNuevoPaciente(true)} />
 
       {/* Modal para agendar cita rápida */}
       <AgendarCitaModal
@@ -207,6 +204,7 @@ export default function PantallaInicio() {
         fechaInicial={hoyStr}
         onCerrar={() => setModalNuevaCita(false)}
       />
+      <FormularioPaciente visible={modalNuevoPaciente} onCerrar={() => setModalNuevoPaciente(false)} onGuardar={datos => { agregarPaciente(datos); setModalNuevoPaciente(false); }} />
     </View>
   );
 }

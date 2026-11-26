@@ -11,6 +11,7 @@ import FormularioPaciente from './Formulariopaciente';
 import { normalizarNombre } from '../utils/utilidades';
 import { useAuth } from '../context/AuthContext';
 import { obtenerPaleta } from '../theme/tema';
+import { citaYaInicio } from '../utils/citas';
 
 interface Props {
   visible: boolean;
@@ -101,6 +102,10 @@ function AgendarCitaContenido({
       Alert.alert('Falta información', 'Selecciona la hora de la cita.');
       return;
     }
+    if (citaYaInicio(fecha, hora)) {
+      Alert.alert('Fecha u hora pasada', 'Selecciona una fecha y una hora futuras para la cita.');
+      return;
+    }
     const datos = {
       paciente: paciente.trim(), fecha, hora,
       tipo: tipo.trim() || 'Terapia individual',
@@ -111,7 +116,7 @@ function AgendarCitaContenido({
     } else {
       agregarCita(datos);
       if (!pacientes.some(p => normalizarNombre(p.nombre) === normalizarNombre(datos.paciente))) {
-        agregarPaciente({ nombre: datos.paciente, fechaNacimiento: '', telefono: '', correo: '' });
+        agregarPaciente({ nombre: datos.paciente, pronombres: '', fechaNacimiento: '', telefono: '', correo: '' });
       }
     }
     onGuardarCita?.(fecha);
@@ -152,12 +157,9 @@ function AgendarCitaContenido({
 
   return (
     <>
-      <KeyboardAvoidingView
-        style={styles.evitarTeclado}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        <Pressable style={styles.contenedor} onPress={evento => evento.stopPropagation()}>
-          <ScrollView contentContainerStyle={styles.scrollContenido} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+      <Pressable style={styles.contenedor} onPress={evento => evento.stopPropagation()}>
+        <ScrollView style={styles.scrollVista} contentContainerStyle={styles.scrollContenido} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+          <KeyboardAvoidingView style={styles.ajusteTeclado} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
             <View style={styles.header}>
               <Text style={styles.titulo}>{cita ? 'Editar cita' : 'Nueva cita'}</Text>
               <TouchableOpacity onPress={onCerrar} accessibilityLabel="Cerrar ventana">
@@ -187,6 +189,7 @@ function AgendarCitaContenido({
                 <DateTimePicker
                   value={valorFechaHora()}
                   mode={selectorFechaHora === 'fecha' ? 'date' : 'time'}
+                  minimumDate={!cita && selectorFechaHora === 'fecha' ? new Date() : undefined}
                   is24Hour
                   locale="es-MX"
                   display={Platform.OS === 'ios' ? (selectorFechaHora === 'fecha' ? 'inline' : 'spinner') : 'default'}
@@ -198,7 +201,7 @@ function AgendarCitaContenido({
             ) : null}
 
             <Text style={styles.label}>Paciente</Text>
-            <TouchableOpacity style={styles.selectorPaciente} onPress={abrirSelectorPaciente}>
+            <View style={styles.selectorPaciente}>
               <Ionicons name="search-outline" size={18} color={paleta.textoSecundario} />
               {busquedaActiva ? (
                 <TextInput
@@ -209,9 +212,13 @@ function AgendarCitaContenido({
                   onChangeText={setBusqueda}
                   autoCapitalize="words"
                 />
-              ) : <Text style={paciente ? styles.valorSelector : styles.placeholder}>{paciente || 'Buscar o seleccionar paciente'}</Text>}
-              <Ionicons name={listaPacientesVisible ? 'chevron-up' : 'chevron-down'} size={18} color={paleta.textoSecundario} />
-            </TouchableOpacity>
+              ) : (
+                <TouchableOpacity style={styles.accionSelectorPaciente} onPress={abrirSelectorPaciente}>
+                  <Text style={paciente ? styles.valorSelector : styles.placeholder}>{paciente || 'Buscar o seleccionar paciente'}</Text>
+                  <Ionicons name={listaPacientesVisible ? 'chevron-up' : 'chevron-down'} size={18} color={paleta.textoSecundario} />
+                </TouchableOpacity>
+              )}
+            </View>
 
             {listaPacientesVisible ? (
               <View style={styles.listaPacientes}>
@@ -251,9 +258,9 @@ function AgendarCitaContenido({
               <Text style={styles.textoGuardar}>{cita ? 'Guardar cambios' : 'Guardar cita'}</Text>
             </TouchableOpacity>
             {cita ? <TouchableOpacity style={styles.botonEliminar} onPress={eliminar}><Text style={styles.textoEliminar}>Eliminar cita</Text></TouchableOpacity> : null}
-          </ScrollView>
-        </Pressable>
-      </KeyboardAvoidingView>
+          </KeyboardAvoidingView>
+        </ScrollView>
+      </Pressable>
       <FormularioPaciente
         visible={nuevoPacienteVisible}
         onCerrar={() => setNuevoPacienteVisible(false)}
@@ -290,9 +297,10 @@ export default function AgendarCitaModal({ visible, fechaInicial, pacienteInicia
 
 const crearStyles = (paleta: ReturnType<typeof obtenerPaleta>) => StyleSheet.create({
   fondo: { flex: 1, backgroundColor: 'rgba(0,0,0,0.42)', justifyContent: 'flex-end' },
-  evitarTeclado: { flex: 1, justifyContent: 'flex-end' },
-  contenedor: { maxHeight: '92%', backgroundColor: paleta.tarjeta, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 22, paddingTop: 20 },
-  scrollContenido: { paddingBottom: 28 },
+  contenedor: { height: '92%', backgroundColor: paleta.tarjeta, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 22, paddingTop: 20 },
+  scrollVista: { flex: 1 },
+  scrollContenido: { flexGrow: 1, paddingBottom: 28 },
+  ajusteTeclado: { flexGrow: 1 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 },
   titulo: { fontSize: 20, fontWeight: 'bold', color: paleta.texto },
   filaCampos: { flexDirection: 'row', gap: 12 },
@@ -305,6 +313,7 @@ const crearStyles = (paleta: ReturnType<typeof obtenerPaleta>) => StyleSheet.cre
   botonListo: { alignItems: 'center', padding: 8 },
   textoPrimario: { color: paleta.primaria, fontWeight: 'bold' },
   selectorPaciente: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 48, paddingHorizontal: 12, marginBottom: 8, backgroundColor: paleta.inputFondo, borderWidth: 1, borderColor: paleta.inputBorde, borderRadius: 14 },
+  accionSelectorPaciente: { flex: 1, flexDirection: 'row', alignItems: 'center', minHeight: 46, gap: 10 },
   inputBusqueda: { flex: 1, paddingVertical: 10, color: paleta.texto },
   listaPacientes: { borderWidth: 1, borderColor: paleta.inputBorde, borderRadius: 14, marginBottom: 14, overflow: 'hidden' },
   botonAgregarPaciente: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, borderBottomWidth: 1, borderBottomColor: paleta.inputBorde },

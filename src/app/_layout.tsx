@@ -1,18 +1,32 @@
-import React, { useContext } from 'react';
+import React, { useContext, useEffect } from 'react';
 import { Stack } from 'expo-router';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, AppState, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { AuthProvider, useAuth } from '../context/AuthContext';
 import { CitasContext, CitasProvider } from '../context/CitasContext';
 import { PacientesContext, PacientesProvider } from '../context/PacientesContext';
 import { obtenerPaleta } from '../theme/tema';
+import { cancelarNotificacionesAgenda, sincronizarNotificaciones } from '../services/notificaciones';
 
 function Rutas() {
   const { estaAutenticado, cargandoAuth, usuarioActual } = useAuth();
   const citas = useContext(CitasContext);
   const pacientes = useContext(PacientesContext);
   const tema = obtenerPaleta(usuarioActual?.paleta, usuarioActual?.modoOscuro);
+
+  useEffect(() => {
+    if (cargandoAuth) return;
+    if (!usuarioActual) {
+      void cancelarNotificacionesAgenda();
+      return;
+    }
+    if (citas?.cargando || pacientes?.cargando || !citas || !pacientes) return;
+    const sincronizar = () => { void sincronizarNotificaciones(citas.citas, pacientes.pacientes); };
+    sincronizar();
+    const suscripcion = AppState.addEventListener('change', estado => { if (estado === 'active') sincronizar(); });
+    return () => suscripcion.remove();
+  }, [cargandoAuth, usuarioActual, citas, pacientes]);
 
   if (cargandoAuth || (estaAutenticado && (citas?.cargando || pacientes?.cargando))) {
     return (

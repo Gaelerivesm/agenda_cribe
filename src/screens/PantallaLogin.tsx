@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -9,17 +9,26 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  useColorScheme,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { usePreventScreenCapture } from 'expo-screen-capture';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import LogoCribe from '../components/LogoCribe';
+import SelectorEspecialidad from '../components/SelectorEspecialidad';
 import { useAuth, validarPassword } from '../context/AuthContext';
+import { ESPECIALIDADES_TERAPIA } from '../utils/catalogos';
+import { obtenerPaleta } from '../theme/tema';
 
 type ModoPantalla = 'login' | 'registro' | 'recuperar_solicitar' | 'recuperar_verificar';
 
 export default function PantallaLogin() {
+  usePreventScreenCapture();
   const insets = useSafeAreaInsets();
+  const esquemaSistema = useColorScheme();
+  const paleta = useMemo(() => obtenerPaleta('rosa', esquemaSistema === 'dark'), [esquemaSistema]);
+  const styles = useMemo(() => crearStyles(paleta), [paleta]);
   const { iniciarSesion, registrarse, generarCodigoRecuperacion, restablecerPassword } = useAuth();
 
   const [modo, setModo] = useState<ModoPantalla>('login');
@@ -34,7 +43,7 @@ export default function PantallaLogin() {
   const [usuarioRegistro, setUsuarioRegistro] = useState('');
   const [correoRegistro, setCorreoRegistro] = useState('');
   const [telefonoRegistro, setTelefonoRegistro] = useState('');
-  const [especialidadRegistro, setEspecialidadRegistro] = useState('');
+  const [especialidadRegistro, setEspecialidadRegistro] = useState<string>(ESPECIALIDADES_TERAPIA[0]);
   const [passwordRegistro, setPasswordRegistro] = useState('');
   const [mostrarPassRegistro, setMostrarPassRegistro] = useState(false);
   const [confirmarPassRegistro, setConfirmarPassRegistro] = useState('');
@@ -46,6 +55,13 @@ export default function PantallaLogin() {
   const [nuevaPassword, setNuevaPassword] = useState('');
   const [confirmarNuevaPassword, setConfirmarNuevaPassword] = useState('');
   const [correoDestinoSimulado, setCorreoDestinoSimulado] = useState('');
+
+  const reglasPassword = [
+    { texto: 'Al menos 8 caracteres', cumple: passwordRegistro.length >= 8 },
+    { texto: 'Incluye un número', cumple: /\p{N}/u.test(passwordRegistro) },
+    { texto: 'Incluye una mayúscula', cumple: /\p{Lu}/u.test(passwordRegistro) },
+    { texto: 'Incluye un símbolo', cumple: /[^\p{L}\p{N}\s]/u.test(passwordRegistro) },
+  ];
 
   // Manejar Login
   const manejarEntrar = async () => {
@@ -189,7 +205,7 @@ export default function PantallaLogin() {
       >
         {/* Cabecera con Logo */}
         <View style={styles.seccionLogo}>
-          <LogoCribe tamano={80} color="#79528F" />
+          <LogoCribe tamano={80} color={paleta.primaria} />
           <Text style={styles.nombreApp}>CRIBE</Text>
           <Text style={styles.subtituloApp}>Agenda para Profesionales</Text>
         </View>
@@ -203,11 +219,11 @@ export default function PantallaLogin() {
 
             <Text style={styles.etiquetaCampo}>Correo, usuario o teléfono</Text>
             <View style={styles.cajaInput}>
-              <Ionicons name="person-outline" size={20} color="#6b7280" style={styles.iconoInput} />
+              <Ionicons name="person-outline" size={20} color={paleta.textoSecundario} style={styles.iconoInput} />
               <TextInput
                 style={styles.input}
                 placeholder="ej. psicologa.maria"
-                placeholderTextColor="#9ca3af"
+                placeholderTextColor={paleta.textoSecundario}
                 value={identificadorLogin}
                 onChangeText={setIdentificadorLogin}
                 autoCapitalize="none"
@@ -216,11 +232,11 @@ export default function PantallaLogin() {
 
             <Text style={styles.etiquetaCampo}>Contraseña</Text>
             <View style={styles.cajaInput}>
-              <Ionicons name="lock-closed-outline" size={20} color="#6b7280" style={styles.iconoInput} />
+              <Ionicons name="lock-closed-outline" size={20} color={paleta.textoSecundario} style={styles.iconoInput} />
               <TextInput
                 style={styles.input}
                 placeholder="••••••••"
-                placeholderTextColor="#9ca3af"
+                placeholderTextColor={paleta.textoSecundario}
                 value={passwordLogin}
                 onChangeText={setPasswordLogin}
                 secureTextEntry={!mostrarPassLogin}
@@ -317,25 +333,16 @@ export default function PantallaLogin() {
               />
             </View>
 
-            <Text style={styles.etiquetaCampo}>Especialidad o Enfoque (opcional)</Text>
-            <View style={styles.cajaInput}>
-              <Ionicons name="school-outline" size={20} color="#6b7280" style={styles.iconoInput} />
-              <TextInput
-                style={styles.input}
-                placeholder="ej. Terapia Cognitivo Conductual"
-                placeholderTextColor="#9ca3af"
-                value={especialidadRegistro}
-                onChangeText={setEspecialidadRegistro}
-              />
-            </View>
+            <Text style={styles.etiquetaCampo}>Especialidad</Text>
+            <SelectorEspecialidad value={especialidadRegistro} onChange={setEspecialidadRegistro} paleta={paleta} />
 
             <Text style={styles.etiquetaCampo}>Contraseña segura *</Text>
             <View style={styles.cajaInput}>
-              <Ionicons name="lock-closed-outline" size={20} color="#6b7280" style={styles.iconoInput} />
+              <Ionicons name="lock-closed-outline" size={20} color={paleta.textoSecundario} style={styles.iconoInput} />
               <TextInput
                 style={styles.input}
                 placeholder="Mínimo 8 caracteres"
-                placeholderTextColor="#9ca3af"
+                placeholderTextColor={paleta.textoSecundario}
                 value={passwordRegistro}
                 onChangeText={setPasswordRegistro}
                 secureTextEntry={!mostrarPassRegistro}
@@ -349,13 +356,18 @@ export default function PantallaLogin() {
                 <Ionicons
                   name={mostrarPassRegistro ? 'eye-off-outline' : 'eye-outline'}
                   size={20}
-                  color="#6b7280"
+                  color={paleta.textoSecundario}
                 />
               </TouchableOpacity>
             </View>
-            <Text style={styles.pistaSeguridad}>
-              Debe incluir al menos 8 caracteres, un número, una mayúscula y un símbolo.
-            </Text>
+            <View style={styles.listaRequisitos}>
+              {reglasPassword.map(regla => (
+                <View key={regla.texto} style={styles.filaRequisito}>
+                  <Ionicons name={regla.cumple ? 'checkmark-circle' : 'ellipse-outline'} size={16} color={regla.cumple ? '#15803D' : paleta.textoSecundario} />
+                  <Text style={[styles.textoRequisito, regla.cumple && styles.requisitoCumplido]}>{regla.texto}</Text>
+                </View>
+              ))}
+            </View>
 
             <Text style={styles.etiquetaCampo}>Confirmar contraseña *</Text>
             <View style={styles.cajaInput}>
@@ -363,7 +375,7 @@ export default function PantallaLogin() {
               <TextInput
                 style={styles.input}
                 placeholder="Repite tu contraseña"
-                placeholderTextColor="#9ca3af"
+                placeholderTextColor={paleta.textoSecundario}
                 value={confirmarPassRegistro}
                 onChangeText={setConfirmarPassRegistro}
                 secureTextEntry
@@ -495,11 +507,11 @@ export default function PantallaLogin() {
   );
 }
 
-const styles = StyleSheet.create({
+const crearStyles = (paleta: ReturnType<typeof obtenerPaleta>) => StyleSheet.create({
   contenedorScroll: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    backgroundColor: '#F8F5FA',
+    backgroundColor: paleta.fondo,
     justifyContent: 'center',
   },
   seccionLogo: {
@@ -509,37 +521,37 @@ const styles = StyleSheet.create({
   nombreApp: {
     fontSize: 28,
     fontWeight: '800',
-    color: '#79528F',
+    color: paleta.primaria,
     letterSpacing: 2,
     marginTop: 8,
   },
   subtituloApp: {
     fontSize: 14,
-    color: '#6b7280',
+    color: paleta.textoSecundario,
     marginTop: 2,
   },
   tarjetaFormulario: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: paleta.tarjeta,
     borderRadius: 24,
     padding: 24,
-    shadowColor: '#79528F',
+    shadowColor: paleta.primaria,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
     shadowRadius: 16,
     elevation: 4,
     borderWidth: 1,
-    borderColor: '#E4D5EB',
+    borderColor: paleta.borde,
   },
   tituloForm: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#111827',
+    color: paleta.texto,
     marginBottom: 16,
     textAlign: 'center',
   },
   descripcionModo: {
     fontSize: 13,
-    color: '#4b5563',
+    color: paleta.textoSecundario,
     lineHeight: 18,
     marginBottom: 16,
     textAlign: 'center',
@@ -547,16 +559,16 @@ const styles = StyleSheet.create({
   etiquetaCampo: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#374151',
+    color: paleta.textoSecundario,
     marginTop: 10,
     marginBottom: 6,
   },
   cajaInput: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: paleta.inputFondo,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: paleta.inputBorde,
     borderRadius: 12,
     paddingHorizontal: 12,
     height: 48,
@@ -567,17 +579,21 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 15,
-    color: '#111827',
+    color: paleta.texto,
   },
   botonOjo: {
     padding: 4,
   },
   pistaSeguridad: {
     fontSize: 11,
-    color: '#6b7280',
+    color: paleta.textoSecundario,
     marginTop: 4,
     marginBottom: 2,
   },
+  listaRequisitos: { marginTop: 8, marginBottom: 4, gap: 5 },
+  filaRequisito: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  textoRequisito: { fontSize: 12, color: paleta.textoSecundario },
+  requisitoCumplido: { color: '#15803D' },
   olvideBoton: {
     alignSelf: 'flex-end',
     marginTop: 10,
@@ -585,17 +601,17 @@ const styles = StyleSheet.create({
   },
   textoOlvide: {
     fontSize: 13,
-    color: '#79528F',
+    color: paleta.primaria,
     fontWeight: '600',
   },
   botonPrincipal: {
-    backgroundColor: '#79528F',
+    backgroundColor: paleta.primaria,
     borderRadius: 14,
     height: 50,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 18,
-    shadowColor: '#79528F',
+    shadowColor: paleta.primaria,
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.25,
     shadowRadius: 6,
@@ -614,11 +630,11 @@ const styles = StyleSheet.create({
   },
   textoPie: {
     fontSize: 14,
-    color: '#6b7280',
+    color: paleta.textoSecundario,
   },
   enlacePie: {
     fontSize: 14,
-    color: '#79528F',
+    color: paleta.primaria,
     fontWeight: '700',
   },
   botonSecundarioTexto: {
@@ -628,12 +644,12 @@ const styles = StyleSheet.create({
   },
   textoBotonSecundario: {
     fontSize: 14,
-    color: '#4b5563',
+    color: paleta.textoSecundario,
     fontWeight: '600',
   },
   bannerCodigo: {
-    backgroundColor: '#F3ECF6',
-    borderColor: '#E4D5EB',
+    backgroundColor: paleta.suave,
+    borderColor: paleta.borde,
     borderWidth: 1,
     borderRadius: 12,
     padding: 12,
@@ -642,12 +658,12 @@ const styles = StyleSheet.create({
   },
   etiquetaCodigoDemo: {
     fontSize: 12,
-    color: '#604074',
+    color: paleta.texto,
   },
   valorCodigoDemo: {
     fontSize: 24,
     fontWeight: '800',
-    color: '#79528F',
+    color: paleta.primaria,
     letterSpacing: 4,
     marginTop: 4,
   },

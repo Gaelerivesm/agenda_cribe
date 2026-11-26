@@ -3,9 +3,11 @@ import { View, Text, StyleSheet, TouchableOpacity, TextInput, FlatList, Keyboard
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CitasContext, Cita } from '../context/CitasContext';
+import { CitasContext, Cita, formatearFecha } from '../context/CitasContext';
 import { PacientesContext, Paciente } from '../context/PacientesContext';
 import FormularioPaciente from '../components/Formulariopaciente';
+import AgendarCitaModal from '../components/AgendarCitaModal';
+import BotonAccionesRapidas from '../components/BotonAccionesRapidas';
 import { normalizarNombre, iniciales, marcaAhora, marcaTiempo, etiquetaRelativa } from '../utils/utilidades';
 import { useAuth } from '../context/AuthContext';
 import { obtenerPaleta } from '../theme/tema';
@@ -24,6 +26,7 @@ export default function PantallaPacientes() {
 
   const [busqueda, setBusqueda] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
+  const [modalCitaVisible, setModalCitaVisible] = useState(false);
 
   const proximaCitaPorPaciente = useMemo(() => {
     const ahora = marcaAhora();
@@ -106,9 +109,7 @@ export default function PantallaPacientes() {
         />
       </KeyboardAvoidingView>
 
-      <TouchableOpacity style={styles.botonFlotante} onPress={() => setModalVisible(true)}>
-        <Ionicons name="add" size={32} color="#ffffff" />
-      </TouchableOpacity>
+      <BotonAccionesRapidas paleta={paleta} style={styles.botonFlotante} onPress={() => setModalVisible(true)} onAgregarCita={() => setModalCitaVisible(true)} onAgregarPaciente={() => setModalVisible(true)} />
 
       <FormularioPaciente
         visible={modalVisible}
@@ -118,6 +119,7 @@ export default function PantallaPacientes() {
           setModalVisible(false);
         }}
       />
+      <AgendarCitaModal visible={modalCitaVisible} fechaInicial={formatearFecha(new Date())} onCerrar={() => setModalCitaVisible(false)} />
     </View>
   );
 }
